@@ -8,29 +8,43 @@
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="logo.svg">
 <title>Concours de Lyonnaise – Île-de-France</title>
+<script>
+  /* Thème clair / sombre : choix mémorisé, sinon celui du téléphone */
+  (function(){ var t = null; try { t = localStorage.getItem("lyonnaise-theme"); } catch(e){}
+    if (!t) t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t); })();
+</script>
 <style>
-  :root{--bg:#f3f1ec;--card:#fff;--ink:#1b2430;--muted:#6b7280;--line:#e4e0d7;--primary:#16324f;--accent:#e0702e;--soft:#e7edf4}
+  :root{--bg:#f3f1ec;--card:#fff;--ink:#1b2430;--muted:#6b7280;--line:#e4e0d7;--primary:#16324f;--accent:#e0702e;--soft:#e7edf4;--head:#16324f;--hasbg:#f7f5f0;--other:#c6c2b9;--syncline:#f2e2b3;color-scheme:light}
+  :root[data-theme="dark"]{--bg:#0e141b;--card:#18212c;--ink:#e6ebf1;--muted:#9aa7b6;--line:#2b3746;--primary:#3a73b5;--accent:#e9813f;--soft:#233142;--head:#0b1622;--hasbg:#1f2b38;--other:#4b5767;--syncline:#4a3f1f;color-scheme:dark}
+  :root[data-theme="dark"] .nav,:root[data-theme="dark"] .link-btn{color:#cfe0f5}
+  :root[data-theme="dark"] .btn.favbtn{background:#3a3016;color:#f3cf6b}
+  :root[data-theme="dark"] .warn{background:#3d3214;color:#f3cf6b}
+  :root[data-theme="dark"] .sync-msg{color:#f3cf6b}
+  :root[data-theme="dark"] .ev{box-shadow:none}
+  .theme-btn{position:absolute;top:12px;right:12px;width:40px;height:40px;border:none;border-radius:12px;background:rgba(255,255,255,.12);color:#fff;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .theme-btn:active{background:rgba(255,255,255,.25)}
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
-  header{background:var(--primary);color:#fff;padding:16px 16px 14px;position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.15)}
-  header h1{margin:0;font-size:1.2rem;display:flex;align-items:center;gap:10px}
+  header{background:var(--head);color:#fff;padding:16px 16px 14px;position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+  header h1{margin:0 48px 0 0;font-size:1.2rem;display:flex;align-items:center;gap:10px}
   header h1 .logo{flex:0 0 auto;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
   header p{margin:2px 0 0;font-size:.82rem;opacity:.8}
   main{max-width:760px;margin:0 auto;padding:12px 12px 40px}
   .tools{display:flex;gap:8px;margin-bottom:10px}
-  .search{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:1rem;background:#fff}
-  .deptbtn{flex:0 0 auto;max-width:45%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:.95rem;background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:inherit}
+  .search{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:1rem;background:var(--card);color:var(--ink)}
+  .deptbtn{flex:0 0 auto;max-width:45%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:.95rem;background:var(--card);color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:inherit}
   .deptbtn.on{background:var(--primary);border-color:var(--primary);color:#fff}
-  .deptpanel{position:absolute;right:0;top:calc(100% + 6px);z-index:8;width:260px;max-width:calc(100vw - 24px);background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:6px 0}
+  .deptpanel{position:absolute;right:0;top:calc(100% + 6px);z-index:8;width:260px;max-width:calc(100vw - 24px);background:var(--card);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:6px 0}
   .drow{display:flex;align-items:center;gap:12px;padding:10px 16px;font-size:1rem;cursor:pointer}
   .drow:active{background:var(--soft)}
   .drow input{width:20px;height:20px;accent-color:var(--primary);margin:0}
   .drow:first-child{border-bottom:1px solid var(--line)}
   .dok{display:block;margin:6px 12px 6px auto;border:none;background:var(--primary);color:#fff;font-weight:600;border-radius:9px;padding:8px 18px;font-size:.95rem;cursor:pointer;font-family:inherit}
-  select{padding:10px;border:1px solid var(--line);border-radius:10px;font-size:.95rem;background:#fff;color:var(--ink)}
+  select{padding:10px;border:1px solid var(--line);border-radius:10px;font-size:.95rem;background:var(--card);color:var(--ink)}
   .filters{display:flex;gap:7px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
   .filters::-webkit-scrollbar{display:none}
-  .chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font-size:.86rem;cursor:pointer;color:var(--ink)}
+  .chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 12px;font-size:.86rem;cursor:pointer;color:var(--ink)}
   .chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
   .card{background:var(--card);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:8px 10px}
   .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
@@ -40,18 +54,18 @@
   .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
   .dow{text-align:center;font-size:.7rem;color:var(--muted);font-weight:600;padding:2px 0;text-transform:uppercase}
   .day{height:38px;border:none;background:none;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.88rem;cursor:pointer;color:var(--ink);padding:0}
-  .day.other{color:#c6c2b9}
+  .day.other{color:var(--other)}
   .day.today{outline:2px solid var(--accent);outline-offset:-2px}
-  .day.has{font-weight:700;background:#f7f5f0}
+  .day.has{font-weight:700;background:var(--hasbg)}
   .day.sel{background:var(--primary);color:#fff}
   .dots{display:flex;gap:2px;margin-top:2px;height:5px}
   .dot{width:5px;height:5px;border-radius:50%;display:inline-block}
   .list-title{margin:18px 4px 8px;font-size:1rem;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
   .list-title small{color:var(--muted);font-weight:400;white-space:nowrap}
-  .ev{display:flex;gap:12px;background:#fff;border-radius:14px;padding:16px 14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.05);cursor:pointer;border-left:5px solid var(--primary)}
+  .ev{display:flex;gap:12px;background:var(--card);border-radius:14px;padding:16px 14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.05);cursor:pointer;border-left:5px solid var(--primary)}
   .ev.cancel{opacity:.55}
   .ev.past{opacity:.6}
-  .sync{background:#fff;border-radius:14px;padding:14px 16px;margin:0 0 12px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid #f2e2b3}
+  .sync{background:var(--card);border-radius:14px;padding:14px 16px;margin:0 0 12px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid var(--syncline)}
   .sync-top{font-weight:700;font-size:1rem}
   .sync-code{font-size:1.9rem;font-weight:800;letter-spacing:.12em;color:var(--primary);margin:6px 0 2px;font-family:ui-monospace,Menlo,Consolas,monospace}
   .sync-help{font-size:.88rem;color:var(--muted);margin:6px 0 10px;line-height:1.45}
@@ -59,7 +73,7 @@
   .sync-btns{display:flex;flex-wrap:wrap;gap:8px}
   .sbtn{border:none;border-radius:10px;padding:9px 14px;font-size:.92rem;font-weight:600;cursor:pointer;background:var(--primary);color:#fff;font-family:inherit}
   .sbtn.ghost{background:var(--soft);color:var(--primary)}
-  .sync-input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:1.3rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .sync-input{width:100%;background:var(--card);color:var(--ink);padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:1.3rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;font-family:ui-monospace,Menlo,Consolas,monospace}
   .past-title{margin:18px 4px 8px;font-size:.9rem;color:var(--muted);font-weight:600}
   .ev-date .yr{display:block;font-size:.7rem;color:var(--muted)}
   .hidden{display:none !important}
@@ -74,7 +88,7 @@
   .day{position:relative}
   .day.favday::after{content:"★";position:absolute;top:2px;right:4px;font-size:.62rem;color:#f2a900}
   .day.sel.favday::after{color:#ffd34d}
-  .btn.favbtn{background:#fff4d6;color:#8a5a00;border:none;font-size:1rem;cursor:pointer;font-family:inherit}
+  .btn.favbtn{background:var(--card)4d6;color:#8a5a00;border:none;font-size:1rem;cursor:pointer;font-family:inherit}
   .ev h3{margin:0 0 5px;font-size:1.15rem}
   .meta{font-size:.95rem;color:var(--muted);line-height:1.5}
   .tag{display:inline-block;font-size:.76rem;font-weight:700;padding:2px 7px;border-radius:6px;color:#fff;margin-right:5px;vertical-align:1px}
@@ -82,7 +96,7 @@
   .empty{text-align:center;color:var(--muted);padding:24px 8px;font-size:.92rem}
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
   .modal.open{display:flex}
-  .sheet{background:#fff;width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:20px 18px 28px;max-height:88vh;overflow:auto;animation:up .2s ease}
+  .sheet{background:var(--card);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:20px 18px 28px;max-height:88vh;overflow:auto;animation:up .2s ease}
   @keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
   @media(min-width:600px){.modal{align-items:center}.sheet{border-radius:18px}}
   .sheet h3{margin:8px 0 12px;font-size:1.2rem}
@@ -100,6 +114,7 @@
 </head>
 <body>
 <header>
+  <button class="theme-btn" id="themeBtn" aria-label="Mode sombre" title="Mode sombre / clair">🌙</button>
   <h1><img src="logo.svg" alt="" width="34" height="34" class="logo">Concours de Lyonnaise</h1>
   <p id="sub">Île-de-France</p>
 </header>
@@ -400,6 +415,21 @@ gridEl.addEventListener("touchend", e => {
   if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) shift(dx < 0 ? 1 : -1);
   tx = null;
 });
+
+/* ---------- Bouton mode sombre ---------- */
+const themeBtn = document.getElementById("themeBtn");
+function applyTheme(t){
+  document.documentElement.setAttribute("data-theme", t);
+  themeBtn.textContent = t === "dark" ? "☀️" : "🌙";
+  themeBtn.setAttribute("aria-label", t === "dark" ? "Passer en mode clair" : "Passer en mode sombre");
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", t === "dark" ? "#0b1622" : "#16324f");
+}
+applyTheme(document.documentElement.getAttribute("data-theme") || "light");
+themeBtn.onclick = () => {
+  const t = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  try { localStorage.setItem("lyonnaise-theme", t); } catch {}
+  applyTheme(t);
+};
 
 function render(){ renderFilters(); renderCalendar(); renderList(); }
 
