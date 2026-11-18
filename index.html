@@ -5,13 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#16324f">
 <meta name="description" content="Calendrier des concours de boule lyonnaise en Île-de-France">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="logo.svg">
 <title>Concours de Lyonnaise – Île-de-France</title>
 <style>
   :root{--bg:#f3f1ec;--card:#fff;--ink:#1b2430;--muted:#6b7280;--line:#e4e0d7;--primary:#16324f;--accent:#e0702e;--soft:#e7edf4}
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
   header{background:var(--primary);color:#fff;padding:16px 16px 14px;position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.15)}
-  header h1{margin:0;font-size:1.2rem}
+  header h1{margin:0;font-size:1.2rem;display:flex;align-items:center;gap:10px}
+  header h1 .logo{flex:0 0 auto;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
   header p{margin:2px 0 0;font-size:.82rem;opacity:.8}
   main{max-width:760px;margin:0 auto;padding:12px 12px 40px}
   .tools{display:flex;gap:8px;margin-bottom:10px}
@@ -76,7 +79,7 @@
 </head>
 <body>
 <header>
-  <h1>🎯 Concours de Lyonnaise</h1>
+  <h1><img src="logo.svg" alt="" width="34" height="34" class="logo">Concours de Lyonnaise</h1>
   <p id="sub">Île-de-France</p>
 </header>
 

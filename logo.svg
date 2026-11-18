@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Logo Concours de Lyonnaise">
+  <defs>
+    <radialGradient id="acier" cx="38%" cy="32%" r="70%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".25" stop-color="#d9dee5"/>
+      <stop offset=".65" stop-color="#8a96a6"/>
+      <stop offset="1" stop-color="#4a5566"/>
+    </radialGradient>
+    <radialGradient id="but" cx="35%" cy="30%" r="70%">
+      <stop offset="0" stop-color="#ffd2b0"/>
+      <stop offset=".5" stop-color="#e0702e"/>
+      <stop offset="1" stop-color="#a8480f"/>
+    </radialGradient>
+  </defs>
+  <!-- page du calendrier -->
+  <rect x="5" y="9" width="46" height="44" rx="7" fill="#ffffff"/>
+  <path d="M5 16a7 7 0 0 1 7-7h32a7 7 0 0 1 7 7v6H5z" fill="#e0702e"/>
+  <rect x="14" y="4" width="5" height="11" rx="2.5" fill="#16324f"/>
+  <rect x="37" y="4" width="5" height="11" rx="2.5" fill="#16324f"/>
+  <!-- grille des jours -->
+  <g fill="#c9d3df">
+    <rect x="11" y="27" width="6" height="5" rx="1.5"/><rect x="20" y="27" width="6" height="5" rx="1.5"/>
+    <rect x="29" y="27" width="6" height="5" rx="1.5"/><rect x="38" y="27" width="6" height="5" rx="1.5"/>
+    <rect x="11" y="35" width="6" height="5" rx="1.5"/><rect x="20" y="35" width="6" height="5" rx="1.5"/>
+    <rect x="11" y="43" width="6" height="5" rx="1.5"/>
+  </g>
+  <!-- ombre, boule et but -->
+  <ellipse cx="44" cy="59" rx="15" ry="2.6" fill="#000" opacity=".18"/>
+  <circle cx="44" cy="44" r="15" fill="url(#acier)" stroke="#16324f" stroke-width="1.4"/>
+  <ellipse cx="38.5" cy="37.5" rx="4.5" ry="2.8" fill="#fff" opacity=".75" transform="rotate(-30 38.5 37.5)"/>
+  <circle cx="24" cy="54" r="4.2" fill="url(#but)" stroke="#16324f" stroke-width="1"/>
+</svg>
