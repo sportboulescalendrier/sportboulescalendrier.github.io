@@ -51,6 +51,15 @@
   .ev{display:flex;gap:12px;background:#fff;border-radius:14px;padding:16px 14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.05);cursor:pointer;border-left:5px solid var(--primary)}
   .ev.cancel{opacity:.55}
   .ev.past{opacity:.6}
+  .sync{background:#fff;border-radius:14px;padding:14px 16px;margin:0 0 12px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid #f2e2b3}
+  .sync-top{font-weight:700;font-size:1rem}
+  .sync-code{font-size:1.9rem;font-weight:800;letter-spacing:.12em;color:var(--primary);margin:6px 0 2px;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .sync-help{font-size:.88rem;color:var(--muted);margin:6px 0 10px;line-height:1.45}
+  .sync-msg{font-size:.88rem;font-weight:600;color:#8a5a00;margin:4px 0 8px}
+  .sync-btns{display:flex;flex-wrap:wrap;gap:8px}
+  .sbtn{border:none;border-radius:10px;padding:9px 14px;font-size:.92rem;font-weight:600;cursor:pointer;background:var(--primary);color:#fff;font-family:inherit}
+  .sbtn.ghost{background:var(--soft);color:var(--primary)}
+  .sync-input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:1.3rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;font-family:ui-monospace,Menlo,Consolas,monospace}
   .past-title{margin:18px 4px 8px;font-size:.9rem;color:var(--muted);font-weight:600}
   .ev-date .yr{display:block;font-size:.7rem;color:var(--muted)}
   .hidden{display:none !important}
@@ -116,6 +125,7 @@
   </section>
 
   <div class="list-title"><span id="listTitle"></span><small id="listCount"></small></div>
+  <div id="favSync" class="sync hidden"></div>
   <div id="list"></div>
 
   <footer id="foot"></footer>
@@ -147,7 +157,70 @@ const FAV_KEY = "lyonnaise-favoris";
 let favs = new Set();
 try { favs = new Set(JSON.parse(localStorage.getItem(FAV_KEY) || "[]")); } catch {}
 function saveFavs(){ try { localStorage.setItem(FAV_KEY, JSON.stringify([...favs])); } catch {} }
-function toggleFav(id){ favs.has(id) ? favs.delete(id) : favs.add(id); saveFavs(); }
+function toggleFav(id){ favs.has(id) ? favs.delete(id) : favs.add(id); saveFavs(); planSync(); }
+
+/* ---------- Sauvegarde en ligne des favoris avec un code personnel ---------- */
+const CODE_KEY = "lyonnaise-code-favoris";
+let favCode = "", syncMode = "", syncMsg = "", syncTimer = null;
+try { favCode = localStorage.getItem(CODE_KEY) || ""; } catch {}
+const fmtCode = c => c ? c.slice(0, 4) + "-" + c.slice(4) : "";
+function setCode(c){ favCode = c; try { c ? localStorage.setItem(CODE_KEY, c) : localStorage.removeItem(CODE_KEY); } catch {} }
+async function pushFavs(){
+  const sb = sbClient(); if (!sb || !favCode) return;
+  const { error } = await sb.rpc("sauver_favoris", { p_code: favCode, p_favoris: [...favs] });
+  if (error && /code inconnu/i.test(error.message)) { setCode(""); syncMsg = "Ce code n'existe plus : créez-en un nouveau."; renderSync(); }
+}
+function planSync(){ if (!favCode) return; clearTimeout(syncTimer); syncTimer = setTimeout(pushFavs, 800); }
+async function pullFavs(){
+  const sb = sbClient(); if (!sb || !favCode) return;
+  const { data, error } = await sb.rpc("charger_favoris", { p_code: favCode });
+  if (!error && Array.isArray(data)) { favs = new Set(data); saveFavs(); render(); }
+}
+function renderSync(){
+  const box = document.getElementById("favSync");
+  if (!favMode || !sbClient()) { box.classList.add("hidden"); return; }
+  box.classList.remove("hidden");
+  const msg = syncMsg ? `<p class="sync-msg">${esc(syncMsg)}</p>` : "";
+  if (favCode && syncMode !== "saisie") {
+    box.innerHTML = `<div class="sync-top">☁️ Favoris sauvegardés en ligne</div>
+      <div class="sync-code">${fmtCode(favCode)}</div>
+      <p class="sync-help">Notez ce code : il permet de retrouver vos favoris sur un autre téléphone ou après avoir vidé votre navigateur. Chaque changement est enregistré automatiquement.</p>${msg}
+      <div class="sync-btns"><button class="sbtn" id="sCopy">📋 Copier le code</button><button class="sbtn ghost" id="sOther">Utiliser un autre code</button><button class="sbtn ghost" id="sForget">Arrêter sur ce téléphone</button></div>`;
+    document.getElementById("sCopy").onclick = async () => {
+      try { await navigator.clipboard.writeText(fmtCode(favCode)); syncMsg = "Code copié ✔"; } catch { syncMsg = "Copie impossible : notez le code à la main."; }
+      renderSync();
+    };
+    document.getElementById("sOther").onclick = () => { syncMode = "saisie"; syncMsg = ""; renderSync(); };
+    document.getElementById("sForget").onclick = () => { setCode(""); syncMsg = "Ce téléphone ne sauvegarde plus vos favoris en ligne. Ils restent enregistrés avec votre code."; renderSync(); };
+  } else if (syncMode === "saisie") {
+    box.innerHTML = `<div class="sync-top">🔑 Retrouver mes favoris</div>
+      <p class="sync-help">Tapez le code reçu lors de la sauvegarde. Vos favoris de ce téléphone seront ajoutés aux siens.</p>
+      <input id="sInput" class="sync-input" placeholder="ex. K7Q2-M9XD" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false">${msg}
+      <div class="sync-btns"><button class="sbtn" id="sLoad">Récupérer</button><button class="sbtn ghost" id="sCancel">Annuler</button></div>`;
+    const inp = document.getElementById("sInput"); inp.focus();
+    inp.onkeydown = e => { if (e.key === "Enter") document.getElementById("sLoad").click(); };
+    document.getElementById("sCancel").onclick = () => { syncMode = ""; syncMsg = ""; renderSync(); };
+    document.getElementById("sLoad").onclick = async () => {
+      const code = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (code.length !== 8) { syncMsg = "Le code fait 8 caractères, par exemple K7Q2-M9XD."; return renderSync(); }
+      const { data, error } = await sbClient().rpc("charger_favoris", { p_code: code });
+      if (error) { syncMsg = "Connexion impossible, réessayez dans un instant."; return renderSync(); }
+      if (!Array.isArray(data)) { syncMsg = "Code inconnu. Vérifiez les caractères."; return renderSync(); }
+      data.forEach(id => favs.add(id)); saveFavs(); setCode(code); syncMode = ""; syncMsg = "Favoris récupérés ✔";
+      await pushFavs(); render();
+    };
+  } else {
+    box.innerHTML = `<div class="sync-top">☁️ Ne perdez pas vos favoris</div>
+      <p class="sync-help">Ils sont enregistrés sur ce téléphone uniquement. Créez un code pour les sauvegarder en ligne et les retrouver partout, sans compte ni e-mail.</p>${msg}
+      <div class="sync-btns"><button class="sbtn" id="sCreate">Créer mon code</button><button class="sbtn ghost" id="sHave">J'ai déjà un code</button></div>`;
+    document.getElementById("sCreate").onclick = async () => {
+      const { data, error } = await sbClient().rpc("sauver_favoris", { p_code: null, p_favoris: [...favs] });
+      if (error || !data) { syncMsg = "Connexion impossible, réessayez dans un instant."; return renderSync(); }
+      setCode(data); syncMsg = ""; renderSync();
+    };
+    document.getElementById("sHave").onclick = () => { syncMode = "saisie"; syncMsg = ""; renderSync(); };
+  }
+}
 const isFav = c => favs.has(c.id);
 const pastConcours = c => (c.fin || c.date) < dkey(today);
 
@@ -199,11 +272,13 @@ function renderCalendar(){
 function renderList(){
   let items = filtered(), title;
   document.getElementById("calCard").classList.toggle("hidden", favMode);
+  if (!favMode) document.getElementById("favSync").classList.add("hidden");
   if (favMode){
     // Tous les favoris, sans lien avec le mois affiché : à venir d'abord, puis les passés
     const all = trier(items);
     items = [...all.filter(c => !pastConcours(c)), ...all.filter(pastConcours).reverse()];
     title = "Mes favoris";
+    renderSync();
   } else if (selected){
     items = items.filter(c => joursDe(c).includes(selected));
     title = parseD(selected).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
@@ -340,6 +415,7 @@ async function load(){
   try {
     const rows = await fetchConcours();
     DATA = { concours: rows };
+    pullFavs();
     const maj = rows.reduce((m, r) => r.updated_at > m ? r.updated_at : m, "");
     showMeta(maj, false);
   } catch (e) {
