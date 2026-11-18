@@ -35,7 +35,7 @@
   .row-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
   .help{font-size:.82rem;color:var(--muted);line-height:1.5}
   .tabs{display:flex;gap:6px;margin-bottom:12px}
-  .tab{flex:1;border:none;background:#fff;padding:10px;border-radius:10px;font-weight:600;cursor:pointer;color:var(--muted);font-family:inherit;font-size:.95rem}
+  .tab{flex:1;min-width:0;border:none;background:#fff;padding:9px 3px;border-radius:10px;font-weight:600;cursor:pointer;color:var(--muted);font-family:inherit;font-size:.82rem}
   .tab.on{background:var(--primary);color:#fff}
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
   .toolbar input{flex:1 1 180px}
@@ -120,6 +120,7 @@
   <div class="hidden" id="vApp">
     <div class="tabs">
       <button class="tab on" data-tab="tConcours">📅 Concours</button>
+      <button class="tab" data-tab="tClubs">🏠 Clubs</button>
       <button class="tab" data-tab="tHist">🕓 Historique</button>
       <button class="tab" data-tab="tSave">💾 Sauvegarde</button>
     </div>
@@ -135,8 +136,18 @@
       <div id="list"></div>
     </section>
 
+    <section id="tClubs" class="hidden">
+      <div class="toolbar">
+        <input id="qc" type="search" placeholder="Rechercher un club">
+        <button class="btn accent" id="addClub">＋ Ajouter un club</button>
+      </div>
+      <p class="help">L'adresse, le téléphone et le contact d'un club s'affichent automatiquement sur tous ses concours.</p>
+      <div class="count" id="countc"></div>
+      <div id="clubList"></div>
+    </section>
+
     <section id="tHist" class="hidden">
-      <p class="help">Les 150 dernières modifications. « Restaurer » remet le concours tel qu'il était avant la modification.</p>
+      <p class="help">Les 150 dernières modifications. « Restaurer » remet le concours ou le club tel qu'il était avant la modification.</p>
       <div id="histList"></div>
     </section>
 
@@ -144,7 +155,7 @@
       <div class="panel">
         <h2>Copie de secours</h2>
         <p class="help">Toutes les modifications sont déjà enregistrées dans la base Supabase. Pensez quand même à télécharger une copie de temps en temps : la formule gratuite de Supabase ne fait pas de sauvegardes automatiques.<br>
-        Remplacez ensuite l'ancien <code>data.json</code> de votre dossier par celui-ci et redéployez le dossier sur Netlify : le site l'affichera si la base est indisponible.</p>
+        Déposez ensuite ce fichier sur GitHub à la place de l'ancien <code>data.json</code> (Add file → Upload files) : le site l'affichera si la base est indisponible.</p>
         <div class="row-btns"><button class="btn primary" id="dl">⬇️ Télécharger data.json</button></div>
       </div>
     </section>
@@ -166,12 +177,13 @@
     </div>
     <label for="f_nom">Nom de l'épreuve (vide pour un concours de club)</label>
     <input id="f_nom" placeholder="ex. Concours dédié M3 – N°2">
-    <div class="grid3">
-      <div style="grid-column:span 2"><label for="f_club">Club / lieu</label><input id="f_club" placeholder="ex. Mitry-Mory"></div>
-      <div><label for="f_dept">Département</label><input id="f_dept" list="deptList" inputmode="numeric" placeholder="77"></div>
+    <label for="f_club_id">Club organisateur</label>
+    <select id="f_club_id"></select>
+    <p class="help" id="clubHint" style="margin:4px 0 0"></p>
+    <div class="grid3" id="lieuBox">
+      <div style="grid-column:span 2"><label for="f_lieu">Lieu (hors club)</label><input id="f_lieu" placeholder="ex. Gerzat"></div>
+      <div><label for="f_dept">Département</label><input id="f_dept" list="deptList" placeholder="63"></div>
     </div>
-    <label for="f_adresse">Adresse du boulodrome</label>
-    <input id="f_adresse" placeholder="ex. 12 rue des Boules, 77290 Mitry-Mory">
     <div class="grid3">
       <div><label for="f_type">Type</label><input id="f_type" list="typeList" placeholder="Pmo"></div>
       <div><label for="f_nb">Nb équipes</label><input id="f_nb" inputmode="numeric" placeholder="16"></div>
@@ -184,13 +196,42 @@
     </div>
     <div class="grid2">
       <div><label for="f_challenge">Challenge</label><input id="f_challenge" placeholder="Chal. …"></div>
-      <div><label for="f_tel">Téléphone</label><input id="f_tel" type="tel" placeholder="06 00 00 00 00"></div>
+      <div><label for="f_tel">Téléphone (si différent du club)</label><input id="f_tel" type="tel" placeholder="06 00 00 00 00"></div>
     </div>
     <label for="f_info">Informations complémentaires</label>
     <textarea id="f_info"></textarea>
     <div class="row-btns">
       <button type="submit" class="btn primary" id="fSave">Enregistrer</button>
       <button type="button" class="btn" id="fCancel">Fermer</button>
+    </div>
+  </form>
+</template>
+
+<template id="clubTpl">
+  <h3 id="cTitle">Club</h3>
+  <p class="help" id="cHelp"></p>
+  <form id="clubForm" autocomplete="off">
+    <div class="grid3">
+      <div style="grid-column:span 2"><label for="c_nom">Nom du club *</label><input id="c_nom" required></div>
+      <div><label for="c_dept">Département</label><input id="c_dept" list="deptList" inputmode="numeric"></div>
+    </div>
+    <label for="c_adresse">Adresse du boulodrome</label>
+    <input id="c_adresse" placeholder="ex. 12 rue des Boules">
+    <div class="grid3">
+      <div><label for="c_cp">Code postal</label><input id="c_cp" inputmode="numeric" placeholder="77290"></div>
+      <div style="grid-column:span 2"><label for="c_ville">Ville</label><input id="c_ville" placeholder="Mitry-Mory"></div>
+    </div>
+    <div class="grid2">
+      <div><label for="c_tel">Téléphone</label><input id="c_tel" type="tel"></div>
+      <div><label for="c_contact">Contact (nom)</label><input id="c_contact"></div>
+    </div>
+    <label for="c_email">E-mail</label>
+    <input id="c_email" type="email">
+    <label for="c_info">Informations (accès, parking…)</label>
+    <textarea id="c_info"></textarea>
+    <div class="row-btns">
+      <button type="submit" class="btn primary" id="cSave">Enregistrer</button>
+      <button type="button" class="btn" id="cCancel">Fermer</button>
     </div>
   </form>
 </template>
@@ -285,11 +326,18 @@ $("newPwForm").onsubmit = async e => {
   await enter();
 };
 
-/* ================= Concours ================= */
+/* ================= Données ================= */
+let CLUBS = [];
 async function reload(){
-  try { ROWS = await fetchConcours(); setupFilters(); render(); }
-  catch (e){ $("list").innerHTML = `<div class="msg err">${esc(errText(e))}</div>`; }
+  try {
+    [ROWS, CLUBS] = await Promise.all([fetchConcours(), fetchClubs()]);
+    setupFilters(); render(); renderClubs();
+  } catch (e){ $("list").innerHTML = `<div class="msg err">${esc(errText(e))}</div>`; }
 }
+const clubById = id => CLUBS.find(c => c.id === id);
+const nbConcours = id => ROWS.filter(r => r.db.club_id === id).length;
+
+/* ================= Concours ================= */
 function setupFilters(){
   const prev = $("fMonth").value;
   const months = [...new Set(ROWS.map(c => c.date.slice(0, 7)))].sort();
@@ -327,8 +375,8 @@ function render(){
 $("list").onclick = e => {
   const b = e.target.closest("button[data-a]"); if (!b) return;
   const c = ROWS.find(x => x.id === b.dataset.id); if (!c) return;
-  if (b.dataset.a === "edit") openForm(c, c.id);
-  if (b.dataset.a === "dup") openForm({ ...c }, null, "Dupliquer – changez la date puis enregistrez");
+  if (b.dataset.a === "edit") openForm(c.db, c.id);
+  if (b.dataset.a === "dup") openForm({ ...c.db }, null, "Dupliquer – changez la date puis enregistrez");
   if (b.dataset.a === "del") askDelete(c);
 };
 $("add").onclick = () => openForm({ date: dkey(new Date()), cat: "pmo" }, null, "Nouveau concours");
@@ -338,27 +386,49 @@ function closeModal(){ $("modal").classList.remove("open"); }
 $("modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
 
+function clubOptions(selected){
+  const byDept = {};
+  CLUBS.forEach(c => (byDept[c.dept || "?"] ||= []).push(c));
+  return `<option value="">— Pas de club : lieu libre —</option>` +
+    Object.keys(byDept).sort().map(d => `<optgroup label="${esc(d)}">` +
+      byDept[d].sort((a, b) => a.nom.localeCompare(b.nom)).map(c => `<option value="${c.id}" ${c.id === selected ? "selected" : ""}>${esc(c.nom)}</option>`).join("") +
+      `</optgroup>`).join("");
+}
 function openForm(src, id, title){
   $("sheet").innerHTML = ""; $("sheet").appendChild($("formTpl").content.cloneNode(true));
   $("modal").classList.add("open");
   $("fTitle").textContent = title || "Modifier le concours";
   $("f_cat").innerHTML = Object.entries(CATS).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("");
   $("f_statut").innerHTML = STATUTS.map(s => `<option value="${s}">${s || "Normal"}</option>`).join("");
-  COLS.forEach(f => { const el = $("f_" + f); if (el) el.value = src[f] ?? ""; });
+  $("f_club_id").innerHTML = clubOptions(src.club_id);
+  COLS.forEach(f => { const el = $("f_" + f); if (el && f !== "club_id") el.value = src[f] ?? ""; });
+  const sync = () => {
+    const cl = clubById($("f_club_id").value);
+    $("lieuBox").classList.toggle("hidden", !!cl);
+    $("clubHint").innerHTML = cl
+      ? `📍 ${esc(adresseClub(cl) || "adresse pas encore renseignée")} · 📞 ${esc(cl.tel || "—")} <a href="#" id="editClubLink">modifier le club</a>`
+      : "Pour une épreuve hors club (national, régional…), indiquez le lieu ci-dessous.";
+    $("f_tel").placeholder = cl && cl.tel ? `Vide = ${cl.tel} (téléphone du club)` : "06 00 00 00 00";
+    const link = $("editClubLink");
+    if (link) link.onclick = ev => { ev.preventDefault(); openClubForm(cl); };
+  };
+  $("f_club_id").onchange = sync; sync();
   $("fCancel").onclick = closeModal;
   $("form").onsubmit = async e => {
     e.preventDefault();
     const v = {}; COLS.forEach(f => v[f] = $("f_" + f).value.trim());
     if (v.fin && v.fin <= v.date) v.fin = "";
-    if (!v.nom && !v.club) return toast("Indiquez au moins un club ou un nom d'épreuve");
+    if (!v.nom && !v.club_id && !v.lieu) return toast("Choisissez un club, ou indiquez un lieu ou un nom d'épreuve");
+    const cl = clubById(v.club_id);
+    if (cl && v.tel === cl.tel) v.tel = "";   // même numéro que le club : on garde le lien
     $("fSave").disabled = true; $("fSave").textContent = "Enregistrement…";
     const row = toDb(v);
-    const res = id ? await sb.from("concours").update(row).eq("id", id).select().single()
-                   : await sb.from("concours").insert(row).select().single();
+    const res = id ? await sb.from("concours").update(row).eq("id", id).select("*, club:clubs(*)").single()
+                   : await sb.from("concours").insert(row).select("*, club:clubs(*)").single();
     if (res.error){ $("fSave").disabled = false; $("fSave").textContent = "Enregistrer"; toast("❌ " + errText(res.error), 5000); return; }
     const saved = normalize(res.data);
     if (id) ROWS = ROWS.map(r => r.id === id ? saved : r); else ROWS.push(saved);
-    closeModal(); setupFilters(); render(); toast("✅ Enregistré, visible sur le site");
+    closeModal(); setupFilters(); render(); renderClubs(); toast("✅ Enregistré, visible sur le site");
   };
   setTimeout(() => $("f_date").focus(), 50);
 }
@@ -371,30 +441,101 @@ function askDelete(c){
     $("yesDel").disabled = true;
     const { error } = await sb.from("concours").delete().eq("id", c.id);
     if (error){ toast("❌ " + errText(error), 5000); $("yesDel").disabled = false; return; }
-    ROWS = ROWS.filter(r => r.id !== c.id); closeModal(); render(); toast("Concours supprimé");
+    ROWS = ROWS.filter(r => r.id !== c.id); closeModal(); render(); renderClubs(); toast("Concours supprimé");
+  };
+}
+
+/* ================= Clubs ================= */
+function renderClubs(){
+  const q = $("qc").value.trim().toLowerCase();
+  const items = CLUBS.filter(c => !q || [c.nom, c.dept, c.ville, c.adresse, c.tel, c.contact].join(" ").toLowerCase().includes(q))
+    .sort((a, b) => (a.dept + a.nom).localeCompare(b.dept + b.nom));
+  const sansAdresse = CLUBS.filter(c => !c.adresse && !c.ville).length;
+  $("countc").textContent = `${items.length} club(s)` + (sansAdresse ? ` · ${sansAdresse} sans adresse` : "");
+  $("clubList").innerHTML = items.map(c => {
+    const n = nbConcours(c.id);
+    return `<div class="item">
+      <div class="d"><b>${esc(c.dept || "—")}</b>${n} concours</div>
+      <div class="t"><b>${esc(c.nom)}${!c.adresse && !c.ville ? `<span class="warn">adresse manquante</span>` : ""}</b>
+        <span>${esc(adresseClub(c) || "Adresse à compléter")}${c.tel ? " · 📞 " + esc(c.tel) : ""}${c.contact ? " · " + esc(c.contact) : ""}</span></div>
+      <div class="acts">
+        <button class="ic" title="Modifier" data-ca="edit" data-id="${c.id}">✏️</button>
+        <button class="ic" title="Supprimer" data-ca="del" data-id="${c.id}">🗑️</button>
+      </div></div>`;
+  }).join("") || `<p class="help" style="text-align:center;padding:20px">Aucun club.</p>`;
+}
+$("qc").addEventListener("input", renderClubs);
+$("addClub").onclick = () => openClubForm(null);
+$("clubList").onclick = e => {
+  const b = e.target.closest("button[data-ca]"); if (!b) return;
+  const c = clubById(b.dataset.id); if (!c) return;
+  if (b.dataset.ca === "edit") openClubForm(c);
+  if (b.dataset.ca === "del") askDeleteClub(c);
+};
+function openClubForm(c){
+  $("sheet").innerHTML = ""; $("sheet").appendChild($("clubTpl").content.cloneNode(true));
+  $("modal").classList.add("open");
+  const n = c ? nbConcours(c.id) : 0;
+  $("cTitle").textContent = c ? `Club : ${c.nom}` : "Nouveau club";
+  $("cHelp").textContent = c ? `Les modifications s'appliquent aux ${n} concours de ce club.` : "";
+  CLUB_COLS.forEach(k => $("c_" + k).value = c ? c[k] : "");
+  $("cCancel").onclick = closeModal;
+  $("clubForm").onsubmit = async e => {
+    e.preventDefault();
+    const v = {}; CLUB_COLS.forEach(k => v[k] = $("c_" + k).value);
+    if (!v.nom.trim()) return toast("Le nom du club est obligatoire");
+    $("cSave").disabled = true; $("cSave").textContent = "Enregistrement…";
+    const row = clubToDb(v);
+    const res = c ? await sb.from("clubs").update(row).eq("id", c.id).select().single()
+                  : await sb.from("clubs").insert(row).select().single();
+    if (res.error){ $("cSave").disabled = false; $("cSave").textContent = "Enregistrer"; toast("❌ " + errText(res.error), 5000); return; }
+    await reload();
+    closeModal(); toast(c ? `✅ Club mis à jour (${n} concours)` : "✅ Club ajouté");
+  };
+  setTimeout(() => $("c_adresse").focus(), 50);
+}
+function askDeleteClub(c){
+  const n = nbConcours(c.id);
+  if (n){ openModal(`<h3>Impossible de supprimer ${esc(c.nom)}</h3><p class="help">Ce club a encore ${n} concours. Rattachez-les d'abord à un autre club ou supprimez-les.</p><div class="row-btns"><button class="btn" id="noDel">Fermer</button></div>`); $("noDel").onclick = closeModal; return; }
+  openModal(`<h3>Supprimer le club ${esc(c.nom)} ?</h3><p class="help">Il n'a aucun concours. Vous pourrez le restaurer depuis l'Historique.</p>
+    <div class="row-btns"><button class="btn danger" id="yesDel">Supprimer</button><button class="btn" id="noDel">Garder</button></div>`);
+  $("noDel").onclick = closeModal;
+  $("yesDel").onclick = async () => {
+    const { error } = await sb.from("clubs").delete().eq("id", c.id);
+    if (error){ toast("❌ " + errText(error), 5000); return; }
+    await reload(); closeModal(); toast("Club supprimé");
   };
 }
 
 /* ================= Historique ================= */
 const ACTION = { ajout: ["Ajout", "#2a8a5f"], modification: ["Modification", "#1f5fa8"], suppression: ["Suppression", "#c0392b"] };
-const LABELS = { date:"Date", fin:"Fin", nom:"Nom", cat:"Catégorie", dept:"Dépt", club:"Club", type:"Type", nb:"Équipes", formule:"Formule", division:"Division", systeme:"Déroulement", challenge:"Challenge", heure:"Heure", tel:"Téléphone", adresse:"Adresse", info:"Infos", statut:"Statut" };
+const LABELS = { date:"Date", fin:"Fin", nom:"Nom", cat:"Catégorie", club_id:"Club", lieu:"Lieu", dept:"Dépt", type:"Type", nb:"Équipes", formule:"Formule", division:"Division", systeme:"Déroulement", challenge:"Challenge", heure:"Heure", tel:"Téléphone", info:"Infos", statut:"Statut",
+  adresse:"Adresse", cp:"Code postal", ville:"Ville", contact:"Contact", email:"E-mail" };
 let HIST = [];
+function histTitle(h){
+  const r = h.nouveau || h.ancien || {};
+  if (h.table_nom === "clubs") return { t: "Club " + (r.nom || ""), d: "" };
+  const cl = clubById(r.club_id);
+  return { t: r.nom || (cl ? cl.nom : r.lieu) || "Concours", d: r.date ? parseD(r.date).toLocaleDateString("fr-FR") : "" };
+}
+const showVal = (k, v) => k === "club_id" ? ((clubById(v) || {}).nom || (v ? "?" : "")) : str(v);
 async function loadHist(){
   $("histList").innerHTML = `<p class="help">Chargement…</p>`;
-  const { data, error } = await sb.from("concours_historique").select("*").order("id", { ascending: false }).limit(150);
+  const { data, error } = await sb.from("historique").select("*").order("id", { ascending: false }).limit(150);
   if (error){ $("histList").innerHTML = `<div class="msg err">${esc(errText(error))}</div>`; return; }
   HIST = data;
   $("histList").innerHTML = data.map(h => {
-    const ref = normalize(h.nouveau || h.ancien || {});
+    const { t, d } = histTitle(h);
     const [lab, col] = ACTION[h.action] || [h.action, "#555"];
+    const cols = h.table_nom === "clubs" ? CLUB_COLS : COLS;
     let changes = "";
-    if (h.action === "modification" && h.ancien && h.nouveau){
-      const a = normalize(h.ancien), n = normalize(h.nouveau);
-      changes = COLS.filter(k => a[k] !== n[k]).map(k => `<li>${LABELS[k]} : ${esc(a[k] || "—")} → <b>${esc(n[k] || "—")}</b></li>`).join("");
-    }
-    const canUndo = h.action !== "ajout" || ROWS.some(r => r.id === h.concours_id);
+    if (h.action === "modification" && h.ancien && h.nouveau)
+      changes = cols.filter(k => str(h.ancien[k]) !== str(h.nouveau[k]))
+        .map(k => `<li>${LABELS[k] || k} : ${esc(showVal(k, h.ancien[k]) || "—")} → <b>${esc(showVal(k, h.nouveau[k]) || "—")}</b></li>`).join("");
+    const exists = (h.table_nom === "clubs" ? CLUBS : ROWS).some(r => r.id === h.ligne_id);
+    const canUndo = h.action === "ajout" ? exists : true;
     return `<div class="hist"><div class="top"><div>
-        <span class="badge" style="background:${col}">${lab}</span><b>${esc(titre(ref))}</b> – ${ref.date ? esc(parseD(ref.date).toLocaleDateString("fr-FR")) : ""}
+        <span class="badge" style="background:${col}">${lab}</span><b>${esc(t)}</b>${d ? " – " + esc(d) : ""}
         <div class="when">${esc(new Date(h.quand).toLocaleString("fr-FR"))}${h.par ? " · " + esc(h.par) : ""}</div></div>
         ${canUndo ? `<button class="btn" data-h="${h.id}">${h.action === "ajout" ? "Annuler l'ajout" : "Restaurer"}</button>` : ""}
       </div>${changes ? `<ul>${changes}</ul>` : ""}</div>`;
@@ -404,22 +545,34 @@ $("histList").onclick = async e => {
   const b = e.target.closest("button[data-h]"); if (!b) return;
   const h = HIST.find(x => String(x.id) === b.dataset.h); if (!h) return;
   b.disabled = true;
+  const table = h.table_nom === "clubs" ? "clubs" : "concours";
   let res;
-  if (h.action === "ajout") res = await sb.from("concours").delete().eq("id", h.concours_id);
-  else res = await sb.from("concours").upsert({ id: h.concours_id, ...toDb(normalize(h.ancien)) });
-  if (res.error){ toast("❌ " + errText(res.error), 5000); b.disabled = false; return; }
+  if (h.action === "ajout") res = await sb.from(table).delete().eq("id", h.ligne_id);
+  else {
+    const old = {}; (table === "clubs" ? CLUB_COLS : COLS).forEach(k => old[k] = str(h.ancien[k]));
+    res = await sb.from(table).upsert({ id: h.ligne_id, ...(table === "clubs" ? clubToDb(old) : toDb(old)) });
+  }
+  if (res.error){
+    toast("❌ " + (/foreign key/i.test(res.error.message) ? "Impossible : ce club a encore des concours, ou le club de ce concours n'existe plus. Restaurez d'abord le club." : errText(res.error)), 6000);
+    b.disabled = false; return;
+  }
   toast("✅ Restauré"); await reload(); await loadHist();
 };
 
 /* ================= Onglets & sauvegarde ================= */
 document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
   document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === t));
-  ["tConcours", "tHist", "tSave"].forEach(id => $(id).classList.toggle("hidden", id !== t.dataset.tab));
+  ["tConcours", "tClubs", "tHist", "tSave"].forEach(id => $(id).classList.toggle("hidden", id !== t.dataset.tab));
   if (t.dataset.tab === "tHist") loadHist();
 });
 $("dl").onclick = () => {
+  const clubsById = Object.fromEntries(CLUBS.map(c => [c.id, c]));
   const out = { saison: SAISON, source: SOURCE, maj: dkey(new Date()),
-    concours: trier(ROWS).map(r => { const o = { id: r.id }; COLS.forEach(k => o[k] = r[k]); return o; }) };
+    concours: trier(ROWS).map(r => {
+      const o = { id: r.id }; COLS.forEach(k => o[k] = r.db[k]);
+      if (!o.fin) o.fin = null; if (!o.club_id) o.club_id = null;
+      o.club = clubsById[r.db.club_id] || null;
+      return o; }) };
   const blob = new Blob([JSON.stringify(out, null, 1) + "\n"], { type: "application/json" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "data.json";
   document.body.appendChild(a); a.click(); a.remove();

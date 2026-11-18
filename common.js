@@ -59,7 +59,9 @@ function trier(list) {
 }
 
 /* ---------- Connexion Supabase ---------- */
-const COLS = ["date","fin","nom","cat","dept","club","type","nb","formule","division","systeme","challenge","heure","tel","adresse","info","statut"];
+// Colonnes enregistrées dans la base
+const COLS = ["date","fin","nom","cat","club_id","lieu","dept","type","nb","formule","division","systeme","challenge","heure","tel","info","statut"];
+const CLUB_COLS = ["nom","dept","adresse","cp","ville","tel","contact","email","info"];
 function supabaseConfigured(){
   return typeof SUPABASE_URL === "string" && /^https:\/\//.test(SUPABASE_URL) && !SUPABASE_URL.includes("VOTRE-PROJET")
       && typeof SUPABASE_KEY === "string" && SUPABASE_KEY && !SUPABASE_KEY.includes("VOTRE-CLE");
@@ -69,22 +71,53 @@ function sbClient(){
   if (!_sb && supabaseConfigured() && window.supabase) _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   return _sb;
 }
+const str = v => v == null ? "" : String(v);
+function normClub(row){
+  const o = { id: row.id, updated_at: str(row.updated_at) };
+  CLUB_COLS.forEach(k => o[k] = str(row[k]));
+  return o;
+}
+function adresseClub(cl){
+  if (!cl) return "";
+  return [cl.adresse, [cl.cp, cl.ville].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+}
+/* Transforme une ligne « concours + club » en objet prêt à afficher.
+   c.db garde les valeurs brutes de la base (pour l'administration). */
 function normalize(row){
-  const o = { id: row.id, updated_at: row.updated_at || "", updated_by: row.updated_by || "" };
-  COLS.forEach(k => o[k] = row[k] == null ? "" : String(row[k]));
+  const db = {}; COLS.forEach(k => db[k] = str(row[k]));
+  const cl = row.club && typeof row.club === "object" ? normClub(row.club) : null;
+  const o = { id: row.id, updated_at: str(row.updated_at), updated_by: str(row.updated_by), db, clubObj: cl };
+  ["date","fin","nom","cat","type","nb","formule","division","systeme","challenge","heure","info","statut"].forEach(k => o[k] = db[k]);
   if (!o.cat) o.cat = "pmo";
+  o.club = cl ? cl.nom : db.lieu;
+  o.dept = cl ? cl.dept : db.dept;
+  o.adresse = adresseClub(cl);
+  o.tel = db.tel || (cl ? cl.tel : "");
+  o.contact = cl ? cl.contact : "";
+  o.email = cl ? cl.email : "";
+  o.clubInfo = cl ? cl.info : "";
   return o;
 }
 function toDb(v){
   const o = {};
-  COLS.forEach(k => { const x = (v[k] ?? "").toString().trim(); o[k] = (k === "fin" && !x) ? null : x; });
+  COLS.forEach(k => {
+    const x = (v[k] ?? "").toString().trim();
+    o[k] = ((k === "fin" || k === "club_id") && !x) ? null : x;
+  });
+  if (o.club_id){ o.lieu = ""; o.dept = ""; }
   if (!o.cat) o.cat = "pmo";
   return o;
 }
+function clubToDb(v){ const o = {}; CLUB_COLS.forEach(k => o[k] = (v[k] ?? "").toString().trim()); return o; }
 async function fetchConcours(){
   const sb = sbClient();
   if (!sb) throw new Error("Supabase non configuré");
-  const { data, error } = await sb.from("concours").select("*").order("date").limit(5000);
+  const { data, error } = await sb.from("concours").select("*, club:clubs(*)").order("date").limit(5000);
   if (error) throw error;
   return data.map(normalize);
+}
+async function fetchClubs(){
+  const { data, error } = await sbClient().from("clubs").select("*").order("dept").order("nom");
+  if (error) throw error;
+  return data.map(normClub);
 }
