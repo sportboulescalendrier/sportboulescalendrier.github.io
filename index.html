@@ -109,6 +109,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
+<script src="version.js"></script>
 <script src="common.js"></script>
 <script>
 let DATA = { concours: [] };
@@ -276,9 +277,10 @@ function render(){ renderFilters(); renderCalendar(); renderList(); }
 
 function showMeta(maj, secours){
   document.getElementById("sub").textContent = `Île-de-France · Saison ${SAISON}`;
+  const v = typeof VERSION === "string" ? `Version ${esc(VERSION)}` : "";
+  const d = maj ? `Concours mis à jour le ${esc(new Date(maj).toLocaleDateString("fr-FR"))}` : "";
   document.getElementById("foot").innerHTML =
-    `Source : ${esc(SOURCE)}` +
-    (maj ? `<br>Dernière mise à jour : ${esc(new Date(maj).toLocaleDateString("fr-FR"))}` : "") +
+    [v, d].filter(Boolean).join(" · ") +
     (secours ? `<br><b>Version de secours affichée</b> (base de données momentanément indisponible).` : "");
 }
 async function load(){
