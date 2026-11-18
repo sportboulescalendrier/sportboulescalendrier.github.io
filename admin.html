@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2b2b2b">
+<title>Administration – Concours de Lyonnaise</title>
+<style>
+  :root{--bg:#f3f1ec;--ink:#1b2430;--muted:#6b7280;--line:#e4e0d7;--primary:#16324f;--accent:#e0702e;--soft:#e7edf4;--bad:#c0392b}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:#2b2b2b;color:#fff;padding:12px 16px;position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  header h1{margin:0;font-size:1.05rem}
+  header .who{font-size:.8rem;opacity:.85;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  header a,header button.lnk{color:#ffd2b5;font-size:.85rem;background:none;border:none;cursor:pointer;padding:0;font-family:inherit;text-decoration:underline}
+  main{max-width:860px;margin:0 auto;padding:12px 12px 60px}
+  .panel{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .panel h2{margin:0 0 10px;font-size:1.05rem}
+  .login{max-width:380px;margin:40px auto}
+  .msg{font-size:.88rem;padding:9px 11px;border-radius:8px;background:var(--soft);margin-top:10px}
+  .msg.err{background:#fbe5e2;color:#8e2a1f}.msg.ok{background:#e3f3ea;color:#1d6644}
+  label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin:9px 0 3px}
+  input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;font-size:1rem;font-family:inherit;background:#fff;color:var(--ink)}
+  textarea{min-height:64px;resize:vertical}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 10px}
+  @media(max-width:520px){.grid3{grid-template-columns:1fr 1fr}}
+  .btn{border:none;border-radius:10px;padding:10px 14px;font-size:.95rem;font-weight:600;cursor:pointer;background:var(--soft);color:var(--primary);font-family:inherit}
+  .btn.primary{background:var(--primary);color:#fff}
+  .btn.accent{background:var(--accent);color:#fff}
+  .btn.danger{background:#fbe5e2;color:var(--bad)}
+  .btn.block{width:100%;margin-top:14px}
+  .btn:disabled{opacity:.55;cursor:default}
+  .row-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .help{font-size:.82rem;color:var(--muted);line-height:1.5}
+  .tabs{display:flex;gap:6px;margin-bottom:12px}
+  .tab{flex:1;border:none;background:#fff;padding:10px;border-radius:10px;font-weight:600;cursor:pointer;color:var(--muted);font-family:inherit;font-size:.95rem}
+  .tab.on{background:var(--primary);color:#fff}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .toolbar input{flex:1 1 180px}
+  .toolbar select{flex:0 1 auto;width:auto}
+  .item{display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:6px;border-left:5px solid var(--primary);box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .item .d{flex:0 0 74px;font-size:.8rem;color:var(--muted);line-height:1.3}
+  .item .d b{display:block;color:var(--ink);font-size:.95rem}
+  .item .t{flex:1;min-width:0}
+  .item .t b{display:block;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .t span{font-size:.8rem;color:var(--muted)}
+  .acts{display:flex;gap:4px}
+  .ic{border:none;background:var(--soft);width:38px;height:38px;border-radius:9px;cursor:pointer;font-size:1rem}
+  .warn{display:inline-block;font-size:.68rem;font-weight:700;padding:1px 6px;border-radius:6px;background:#fdecc8;color:#8a5a00;margin-left:4px}
+  .count{font-size:.85rem;color:var(--muted);margin:4px 2px 8px}
+  .hist{background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:6px;font-size:.88rem;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .hist .top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+  .hist .when{color:var(--muted);font-size:.78rem}
+  .hist ul{margin:6px 0 0;padding-left:18px;color:var(--muted);font-size:.82rem}
+  .badge{font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:6px;color:#fff;margin-right:6px}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
+  .modal.open{display:flex}
+  .sheet{background:#fff;width:100%;max-width:620px;border-radius:18px 18px 0 0;padding:18px 16px 22px;max-height:92vh;overflow:auto}
+  @media(min-width:640px){.modal{align-items:center}.sheet{border-radius:18px}}
+  .sheet h3{margin:0 0 6px}
+  .toast{position:fixed;top:66px;left:50%;transform:translateX(-50%);background:#1b2430;color:#fff;padding:10px 16px;border-radius:10px;font-size:.9rem;z-index:20;display:none;max-width:90vw;text-align:center}
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚙️ Administration du calendrier</h1>
+  <div class="who">
+    <span id="who"></span>
+    <button class="lnk hidden" id="pwBtn">Mot de passe</button>
+    <button class="lnk hidden" id="logout">Déconnexion</button>
+    <a href="index.html" target="_blank" rel="noopener">Voir le site ↗</a>
+  </div>
+</header>
+
+<main>
+  <!-- Configuration manquante -->
+  <section class="panel hidden" id="vConfig">
+    <h2>Configuration à terminer</h2>
+    <p class="help">Renseignez l'adresse du projet Supabase et la clé publique dans le fichier <code>config.js</code>. Les étapes sont détaillées dans le fichier LISEZ-MOI.</p>
+  </section>
+
+  <!-- Connexion -->
+  <section class="panel login hidden" id="vLogin">
+    <h2>Connexion</h2>
+    <form id="loginForm">
+      <label for="email">E-mail</label>
+      <input id="email" type="email" autocomplete="username" required>
+      <label for="password">Mot de passe</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <button class="btn primary block" type="submit" id="loginBtn">Se connecter</button>
+    </form>
+    <div class="row-btns"><button class="btn" id="forgot" type="button">Mot de passe oublié ?</button></div>
+    <div class="msg hidden" id="loginMsg"></div>
+  </section>
+
+  <!-- Nouveau mot de passe -->
+  <section class="panel login hidden" id="vNewPw">
+    <h2 id="newPwTitle">Choisir un nouveau mot de passe</h2>
+    <form id="newPwForm">
+      <label for="np1">Nouveau mot de passe (8 caractères minimum)</label>
+      <input id="np1" type="password" autocomplete="new-password" minlength="8" required>
+      <label for="np2">Confirmer</label>
+      <input id="np2" type="password" autocomplete="new-password" minlength="8" required>
+      <button class="btn primary block" type="submit">Enregistrer le mot de passe</button>
+    </form>
+    <div class="row-btns"><button class="btn hidden" id="npCancel" type="button">Annuler</button></div>
+    <div class="msg hidden" id="npMsg"></div>
+  </section>
+
+  <!-- Compte non autorisé -->
+  <section class="panel login hidden" id="vDenied">
+    <h2>Accès refusé</h2>
+    <p class="help">Ce compte est bien connecté, mais il ne figure pas dans la liste des administrateurs. Ajoutez son e-mail à la table <code>admins</code> dans Supabase.</p>
+  </section>
+
+  <!-- Application -->
+  <div class="hidden" id="vApp">
+    <div class="tabs">
+      <button class="tab on" data-tab="tConcours">📅 Concours</button>
+      <button class="tab" data-tab="tHist">🕓 Historique</button>
+      <button class="tab" data-tab="tSave">💾 Sauvegarde</button>
+    </div>
+
+    <section id="tConcours">
+      <div class="toolbar">
+        <input id="q" type="search" placeholder="Rechercher (club, challenge, téléphone…)">
+        <select id="fMonth"><option value="">Tous les mois</option></select>
+        <select id="fStat"></select>
+        <button class="btn accent" id="add">＋ Ajouter</button>
+      </div>
+      <div class="count" id="count"></div>
+      <div id="list"></div>
+    </section>
+
+    <section id="tHist" class="hidden">
+      <p class="help">Les 150 dernières modifications. « Restaurer » remet le concours tel qu'il était avant la modification.</p>
+      <div id="histList"></div>
+    </section>
+
+    <section id="tSave" class="hidden">
+      <div class="panel">
+        <h2>Copie de secours</h2>
+        <p class="help">Toutes les modifications sont déjà enregistrées dans la base Supabase. Pensez quand même à télécharger une copie de temps en temps : la formule gratuite de Supabase ne fait pas de sauvegardes automatiques.<br>
+        Remplacez ensuite l'ancien <code>data.json</code> de votre dossier par celui-ci et redéployez le dossier sur Netlify : le site l'affichera si la base est indisponible.</p>
+        <div class="row-btns"><button class="btn primary" id="dl">⬇️ Télécharger data.json</button></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true"><div class="sheet" id="sheet"></div></div>
+
+<template id="formTpl">
+  <h3 id="fTitle">Modifier</h3>
+  <form id="form" autocomplete="off">
+    <div class="grid2">
+      <div><label for="f_date">Date *</label><input type="date" id="f_date" required></div>
+      <div><label for="f_fin">Date de fin (si plusieurs jours)</label><input type="date" id="f_fin"></div>
+    </div>
+    <div class="grid2">
+      <div><label for="f_cat">Catégorie</label><select id="f_cat"></select></div>
+      <div><label for="f_statut">Statut</label><select id="f_statut"></select></div>
+    </div>
+    <label for="f_nom">Nom de l'épreuve (vide pour un concours de club)</label>
+    <input id="f_nom" placeholder="ex. Concours dédié M3 – N°2">
+    <div class="grid3">
+      <div style="grid-column:span 2"><label for="f_club">Club / lieu</label><input id="f_club" placeholder="ex. Mitry-Mory"></div>
+      <div><label for="f_dept">Département</label><input id="f_dept" list="deptList" inputmode="numeric" placeholder="77"></div>
+    </div>
+    <label for="f_adresse">Adresse du boulodrome</label>
+    <input id="f_adresse" placeholder="ex. 12 rue des Boules, 77290 Mitry-Mory">
+    <div class="grid3">
+      <div><label for="f_type">Type</label><input id="f_type" list="typeList" placeholder="Pmo"></div>
+      <div><label for="f_nb">Nb équipes</label><input id="f_nb" inputmode="numeric" placeholder="16"></div>
+      <div><label for="f_formule">Formule</label><input id="f_formule" list="formList" placeholder="Doub"></div>
+    </div>
+    <div class="grid3">
+      <div><label for="f_division">Division</label><input id="f_division" list="divList" placeholder="3&4"></div>
+      <div><label for="f_systeme">Déroulement</label><input id="f_systeme" list="sysList" placeholder="4 Parties"></div>
+      <div><label for="f_heure">Heure</label><input id="f_heure" placeholder="8h30"></div>
+    </div>
+    <div class="grid2">
+      <div><label for="f_challenge">Challenge</label><input id="f_challenge" placeholder="Chal. …"></div>
+      <div><label for="f_tel">Téléphone</label><input id="f_tel" type="tel" placeholder="06 00 00 00 00"></div>
+    </div>
+    <label for="f_info">Informations complémentaires</label>
+    <textarea id="f_info"></textarea>
+    <div class="row-btns">
+      <button type="submit" class="btn primary" id="fSave">Enregistrer</button>
+      <button type="button" class="btn" id="fCancel">Fermer</button>
+    </div>
+  </form>
+</template>
+
+<datalist id="deptList"></datalist>
+<datalist id="typeList"><option value="Pmo"><option value="Loisir"></datalist>
+<datalist id="formList"></datalist>
+<datalist id="divList"><option value="3&4"><option value="3&4+1"><option value="TD"><option value="Vétérans"><option value="4"></datalist>
+<datalist id="sysList"><option value="3 Parties"><option value="4 Parties"><option value="Groupes"><option value="Poules"><option value="Syst. Aurard"><option value="Réservé 77"><option value="Réservé 78"></datalist>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const VIEWS = ["vConfig","vLogin","vNewPw","vDenied","vApp"];
+let sb = null, user = null, ROWS = [], recovering = false;
+
+function show(v){ VIEWS.forEach(x => $(x).classList.toggle("hidden", x !== v)); }
+function toast(msg, ms = 2600){ const t = $("toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", ms); }
+function msg(id, text, kind = ""){ const m = $(id); m.textContent = text; m.className = "msg " + kind; }
+function errText(e){
+  const m = (e && (e.message || e.error_description)) || String(e);
+  if (/invalid login credentials/i.test(m)) return "E-mail ou mot de passe incorrect.";
+  if (/email not confirmed/i.test(m)) return "Adresse e-mail pas encore confirmée.";
+  if (/row-level security|permission denied/i.test(m)) return "Action refusée : ce compte n'est pas administrateur.";
+  if (/failed to fetch|network/i.test(m)) return "Pas de connexion à la base. Vérifiez internet (ou que le projet Supabase n'est pas en pause).";
+  if (/should be different/i.test(m)) return "Le nouveau mot de passe doit être différent de l'ancien.";
+  if (/at least/i.test(m)) return "Mot de passe trop court.";
+  return m;
+}
+
+/* ================= Authentification ================= */
+async function boot(){
+  if (!supabaseConfigured() || !window.supabase){ show("vConfig"); return; }
+  sb = sbClient();
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === "PASSWORD_RECOVERY"){ recovering = true; user = session?.user || null; openNewPw(true); return; }
+    if (event === "SIGNED_OUT"){ user = null; ROWS = []; setWho(); show("vLogin"); }
+  });
+  const { data } = await sb.auth.getSession();
+  if (recovering) return;
+  if (data.session){ user = data.session.user; await enter(); } else show("vLogin");
+}
+async function enter(){
+  setWho();
+  const { data: ok, error } = await sb.rpc("is_admin");
+  if (error){ show("vLogin"); msg("loginMsg", errText(error), "err"); return; }
+  if (!ok){ show("vDenied"); return; }
+  show("vApp");
+  await reload();
+}
+function setWho(){
+  $("who").textContent = user ? user.email : "";
+  $("logout").classList.toggle("hidden", !user);
+  $("pwBtn").classList.toggle("hidden", !user);
+}
+$("loginForm").onsubmit = async e => {
+  e.preventDefault();
+  $("loginBtn").disabled = true; msg("loginMsg", "Connexion…");
+  const { data, error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
+  $("loginBtn").disabled = false;
+  if (error){ msg("loginMsg", errText(error), "err"); return; }
+  $("loginMsg").classList.add("hidden"); $("password").value = "";
+  user = data.user; await enter();
+};
+$("forgot").onclick = async () => {
+  const email = $("email").value.trim();
+  if (!email){ msg("loginMsg", "Saisissez d'abord votre e-mail ci-dessus.", "err"); return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  msg("loginMsg", error ? errText(error) : "Si ce compte existe, un e-mail avec un lien de réinitialisation vient d'être envoyé.", error ? "err" : "ok");
+};
+$("logout").onclick = async () => { await sb.auth.signOut(); toast("Déconnecté"); };
+$("pwBtn").onclick = () => openNewPw(false);
+function openNewPw(fromEmail){
+  $("newPwTitle").textContent = fromEmail ? "Choisir un nouveau mot de passe" : "Changer mon mot de passe";
+  $("npCancel").classList.toggle("hidden", fromEmail);
+  $("npMsg").classList.add("hidden"); $("np1").value = $("np2").value = "";
+  setWho(); show("vNewPw");
+}
+$("npCancel").onclick = () => show("vApp");
+$("newPwForm").onsubmit = async e => {
+  e.preventDefault();
+  if ($("np1").value !== $("np2").value){ msg("npMsg", "Les deux mots de passe ne correspondent pas.", "err"); return; }
+  const { error } = await sb.auth.updateUser({ password: $("np1").value });
+  if (error){ msg("npMsg", errText(error), "err"); return; }
+  toast("Mot de passe enregistré");
+  recovering = false;
+  history.replaceState(null, "", location.pathname);
+  await enter();
+};
+
+/* ================= Concours ================= */
+async function reload(){
+  try { ROWS = await fetchConcours(); setupFilters(); render(); }
+  catch (e){ $("list").innerHTML = `<div class="msg err">${esc(errText(e))}</div>`; }
+}
+function setupFilters(){
+  const prev = $("fMonth").value;
+  const months = [...new Set(ROWS.map(c => c.date.slice(0, 7)))].sort();
+  $("fMonth").innerHTML = `<option value="">Tous les mois</option>` + months.map(m => {
+    const [y, mo] = m.split("-"); return `<option value="${m}">${MOIS[+mo - 1]} ${y}</option>`; }).join("");
+  const now = dkey(new Date()).slice(0, 7);
+  $("fMonth").value = $("fMonth").dataset.init ? (months.includes(prev) ? prev : "") : (months.includes(now) ? now : "");
+  $("fMonth").dataset.init = 1;
+  if (!$("fStat").options.length)
+    $("fStat").innerHTML = `<option value="">Tous statuts</option><option value="!">Avec un statut</option>` + STATUTS.filter(Boolean).map(s => `<option>${s}</option>`).join("");
+  $("deptList").innerHTML = DEPTS.map(d => `<option value="${d}">`).join("");
+  $("formList").innerHTML = Object.entries(FORMULES).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
+}
+function render(){
+  const q = $("q").value.trim().toLowerCase(), m = $("fMonth").value, st = $("fStat").value;
+  const items = trier(ROWS).filter(c =>
+    (!m || joursDe(c).some(k => k.startsWith(m))) &&
+    (!st || (st === "!" ? c.statut : c.statut === st)) &&
+    (!q || [c.date, c.nom, c.club, c.dept, c.challenge, c.adresse, c.tel, c.info, c.formule, c.division].join(" ").toLowerCase().includes(q)));
+  $("count").textContent = `${items.length} concours affiché(s) sur ${ROWS.length}`;
+  $("list").innerHTML = items.map(c => {
+    const d = parseD(c.date), k = catOf(c);
+    return `<div class="item" style="border-left-color:${k.color}">
+      <div class="d"><b>${d.getDate()} ${d.toLocaleDateString("fr-FR", { month: "short" })}</b>${JOURS[(d.getDay() + 6) % 7]} ${d.getFullYear()}${c.fin && c.fin > c.date ? "<br>→ " + parseD(c.fin).getDate() : ""}</div>
+      <div class="t"><b>${esc(titre(c))}${c.dept && !c.nom ? " (" + esc(c.dept) + ")" : ""}${c.statut ? `<span class="warn">${esc(c.statut)}</span>` : ""}</b>
+        <span>${esc(k.label)}${format(c) ? " · " + esc(format(c)) : ""}${c.heure ? " · " + esc(c.heure) : ""}${c.nom && c.club ? " · " + esc(c.club) : ""}</span></div>
+      <div class="acts">
+        <button class="ic" title="Modifier" data-a="edit" data-id="${c.id}">✏️</button>
+        <button class="ic" title="Dupliquer" data-a="dup" data-id="${c.id}">⧉</button>
+        <button class="ic" title="Supprimer" data-a="del" data-id="${c.id}">🗑️</button>
+      </div></div>`;
+  }).join("") || `<p class="help" style="text-align:center;padding:20px">Aucun concours.</p>`;
+}
+["q", "fMonth", "fStat"].forEach(id => $(id).addEventListener("input", render));
+$("list").onclick = e => {
+  const b = e.target.closest("button[data-a]"); if (!b) return;
+  const c = ROWS.find(x => x.id === b.dataset.id); if (!c) return;
+  if (b.dataset.a === "edit") openForm(c, c.id);
+  if (b.dataset.a === "dup") openForm({ ...c }, null, "Dupliquer – changez la date puis enregistrez");
+  if (b.dataset.a === "del") askDelete(c);
+};
+$("add").onclick = () => openForm({ date: dkey(new Date()), cat: "pmo" }, null, "Nouveau concours");
+
+function openModal(html){ $("sheet").innerHTML = html; $("modal").classList.add("open"); }
+function closeModal(){ $("modal").classList.remove("open"); }
+$("modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+function openForm(src, id, title){
+  $("sheet").innerHTML = ""; $("sheet").appendChild($("formTpl").content.cloneNode(true));
+  $("modal").classList.add("open");
+  $("fTitle").textContent = title || "Modifier le concours";
+  $("f_cat").innerHTML = Object.entries(CATS).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("");
+  $("f_statut").innerHTML = STATUTS.map(s => `<option value="${s}">${s || "Normal"}</option>`).join("");
+  COLS.forEach(f => { const el = $("f_" + f); if (el) el.value = src[f] ?? ""; });
+  $("fCancel").onclick = closeModal;
+  $("form").onsubmit = async e => {
+    e.preventDefault();
+    const v = {}; COLS.forEach(f => v[f] = $("f_" + f).value.trim());
+    if (v.fin && v.fin <= v.date) v.fin = "";
+    if (!v.nom && !v.club) return toast("Indiquez au moins un club ou un nom d'épreuve");
+    $("fSave").disabled = true; $("fSave").textContent = "Enregistrement…";
+    const row = toDb(v);
+    const res = id ? await sb.from("concours").update(row).eq("id", id).select().single()
+                   : await sb.from("concours").insert(row).select().single();
+    if (res.error){ $("fSave").disabled = false; $("fSave").textContent = "Enregistrer"; toast("❌ " + errText(res.error), 5000); return; }
+    const saved = normalize(res.data);
+    if (id) ROWS = ROWS.map(r => r.id === id ? saved : r); else ROWS.push(saved);
+    closeModal(); setupFilters(); render(); toast("✅ Enregistré, visible sur le site");
+  };
+  setTimeout(() => $("f_date").focus(), 50);
+}
+function askDelete(c){
+  openModal(`<h3>Supprimer ce concours ?</h3><p>${esc(titre(c))} – ${esc(dateLongue(c.date))}</p>
+    <p class="help">En cas d'erreur, vous pourrez le restaurer depuis l'onglet Historique.</p>
+    <div class="row-btns"><button class="btn danger" id="yesDel">Supprimer</button><button class="btn" id="noDel">Garder</button></div>`);
+  $("noDel").onclick = closeModal;
+  $("yesDel").onclick = async () => {
+    $("yesDel").disabled = true;
+    const { error } = await sb.from("concours").delete().eq("id", c.id);
+    if (error){ toast("❌ " + errText(error), 5000); $("yesDel").disabled = false; return; }
+    ROWS = ROWS.filter(r => r.id !== c.id); closeModal(); render(); toast("Concours supprimé");
+  };
+}
+
+/* ================= Historique ================= */
+const ACTION = { ajout: ["Ajout", "#2a8a5f"], modification: ["Modification", "#1f5fa8"], suppression: ["Suppression", "#c0392b"] };
+const LABELS = { date:"Date", fin:"Fin", nom:"Nom", cat:"Catégorie", dept:"Dépt", club:"Club", type:"Type", nb:"Équipes", formule:"Formule", division:"Division", systeme:"Déroulement", challenge:"Challenge", heure:"Heure", tel:"Téléphone", adresse:"Adresse", info:"Infos", statut:"Statut" };
+let HIST = [];
+async function loadHist(){
+  $("histList").innerHTML = `<p class="help">Chargement…</p>`;
+  const { data, error } = await sb.from("concours_historique").select("*").order("id", { ascending: false }).limit(150);
+  if (error){ $("histList").innerHTML = `<div class="msg err">${esc(errText(error))}</div>`; return; }
+  HIST = data;
+  $("histList").innerHTML = data.map(h => {
+    const ref = normalize(h.nouveau || h.ancien || {});
+    const [lab, col] = ACTION[h.action] || [h.action, "#555"];
+    let changes = "";
+    if (h.action === "modification" && h.ancien && h.nouveau){
+      const a = normalize(h.ancien), n = normalize(h.nouveau);
+      changes = COLS.filter(k => a[k] !== n[k]).map(k => `<li>${LABELS[k]} : ${esc(a[k] || "—")} → <b>${esc(n[k] || "—")}</b></li>`).join("");
+    }
+    const canUndo = h.action !== "ajout" || ROWS.some(r => r.id === h.concours_id);
+    return `<div class="hist"><div class="top"><div>
+        <span class="badge" style="background:${col}">${lab}</span><b>${esc(titre(ref))}</b> – ${ref.date ? esc(parseD(ref.date).toLocaleDateString("fr-FR")) : ""}
+        <div class="when">${esc(new Date(h.quand).toLocaleString("fr-FR"))}${h.par ? " · " + esc(h.par) : ""}</div></div>
+        ${canUndo ? `<button class="btn" data-h="${h.id}">${h.action === "ajout" ? "Annuler l'ajout" : "Restaurer"}</button>` : ""}
+      </div>${changes ? `<ul>${changes}</ul>` : ""}</div>`;
+  }).join("") || `<p class="help">Aucune modification pour l'instant.</p>`;
+}
+$("histList").onclick = async e => {
+  const b = e.target.closest("button[data-h]"); if (!b) return;
+  const h = HIST.find(x => String(x.id) === b.dataset.h); if (!h) return;
+  b.disabled = true;
+  let res;
+  if (h.action === "ajout") res = await sb.from("concours").delete().eq("id", h.concours_id);
+  else res = await sb.from("concours").upsert({ id: h.concours_id, ...toDb(normalize(h.ancien)) });
+  if (res.error){ toast("❌ " + errText(res.error), 5000); b.disabled = false; return; }
+  toast("✅ Restauré"); await reload(); await loadHist();
+};
+
+/* ================= Onglets & sauvegarde ================= */
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === t));
+  ["tConcours", "tHist", "tSave"].forEach(id => $(id).classList.toggle("hidden", id !== t.dataset.tab));
+  if (t.dataset.tab === "tHist") loadHist();
+});
+$("dl").onclick = () => {
+  const out = { saison: SAISON, source: SOURCE, maj: dkey(new Date()),
+    concours: trier(ROWS).map(r => { const o = { id: r.id }; COLS.forEach(k => o[k] = r[k]); return o; }) };
+  const blob = new Blob([JSON.stringify(out, null, 1) + "\n"], { type: "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "data.json";
+  document.body.appendChild(a); a.click(); a.remove();
+  toast("Copie téléchargée");
+};
+
+boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#16324f">
+<meta name="description" content="Calendrier des concours de boule lyonnaise en Île-de-France">
+<title>Concours de Lyonnaise – Île-de-France</title>
+<style>
+  :root{--bg:#f3f1ec;--card:#fff;--ink:#1b2430;--muted:#6b7280;--line:#e4e0d7;--primary:#16324f;--accent:#e0702e;--soft:#e7edf4}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+  header{background:var(--primary);color:#fff;padding:16px 16px 14px;position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+  header h1{margin:0;font-size:1.2rem}
+  header p{margin:2px 0 0;font-size:.82rem;opacity:.8}
+  main{max-width:760px;margin:0 auto;padding:12px 12px 40px}
+  .tools{display:flex;gap:8px;margin-bottom:10px}
+  .search{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:1rem;background:#fff}
+  select{padding:10px;border:1px solid var(--line);border-radius:10px;font-size:.95rem;background:#fff;color:var(--ink)}
+  .filters{display:flex;gap:7px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
+  .filters::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font-size:.86rem;cursor:pointer;color:var(--ink)}
+  .chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+  .card{background:var(--card);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:12px}
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .cal-head h2{margin:0;font-size:1.1rem;text-transform:capitalize}
+  .nav{border:none;background:var(--soft);color:var(--primary);width:40px;height:40px;border-radius:10px;font-size:1.3rem;cursor:pointer}
+  .link-btn{border:none;background:none;color:var(--accent);font-weight:600;cursor:pointer;font-size:.85rem;padding:2px 6px}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .dow{text-align:center;font-size:.7rem;color:var(--muted);font-weight:600;padding:4px 0;text-transform:uppercase}
+  .day{aspect-ratio:1/1;border:none;background:none;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.95rem;cursor:pointer;color:var(--ink);padding:0}
+  .day.other{color:#c6c2b9}
+  .day.today{outline:2px solid var(--accent);outline-offset:-2px}
+  .day.has{font-weight:700;background:#f7f5f0}
+  .day.sel{background:var(--primary);color:#fff}
+  .dots{display:flex;gap:2px;margin-top:3px;height:6px}
+  .dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+  .list-title{margin:18px 4px 8px;font-size:1rem;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .list-title small{color:var(--muted);font-weight:400;white-space:nowrap}
+  .ev{display:flex;gap:12px;background:#fff;border-radius:12px;padding:12px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.05);cursor:pointer;border-left:5px solid var(--primary)}
+  .ev.cancel{opacity:.55}
+  .ev.cancel h3{text-decoration:line-through}
+  .ev-date{flex:0 0 44px;text-align:center}
+  .ev-date b{display:block;font-size:1.35rem;line-height:1}
+  .ev-date span{font-size:.7rem;color:var(--muted);text-transform:uppercase}
+  .ev-body{min-width:0}
+  .ev h3{margin:0 0 3px;font-size:.98rem}
+  .meta{font-size:.82rem;color:var(--muted);line-height:1.45}
+  .tag{display:inline-block;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:6px;color:#fff;margin-right:5px;vertical-align:1px}
+  .warn{display:inline-block;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:6px;background:#fdecc8;color:#8a5a00;margin-left:4px}
+  .empty{text-align:center;color:var(--muted);padding:24px 8px;font-size:.92rem}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
+  .modal.open{display:flex}
+  .sheet{background:#fff;width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:20px 18px 28px;max-height:88vh;overflow:auto;animation:up .2s ease}
+  @keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
+  @media(min-width:600px){.modal{align-items:center}.sheet{border-radius:18px}}
+  .sheet h3{margin:8px 0 12px;font-size:1.2rem}
+  .row{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:.93rem}
+  .row b{flex:0 0 105px;color:var(--muted);font-weight:600}
+  .row a{color:var(--primary)}
+  .close{float:right;border:none;background:var(--soft);border-radius:50%;width:36px;height:36px;font-size:1.1rem;cursor:pointer}
+  .btn{display:inline-block;margin:14px 8px 0 0;background:var(--accent);color:#fff;text-decoration:none;padding:10px 16px;border-radius:10px;font-weight:600}
+  .btn.alt{background:var(--soft);color:var(--primary)}
+  footer{text-align:center;font-size:.75rem;color:var(--muted);margin-top:24px;line-height:1.6}
+  .loading{text-align:center;padding:40px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎯 Concours de Lyonnaise</h1>
+  <p id="sub">Île-de-France</p>
+</header>
+
+<main>
+  <div class="tools">
+    <input class="search" id="q" type="search" placeholder="Club, ville, challenge…" aria-label="Rechercher">
+    <select id="dept" aria-label="Département"><option value="">Tous dép.</option></select>
+  </div>
+  <div class="filters" id="filters"></div>
+
+  <section class="card">
+    <div class="cal-head">
+      <button class="nav" id="prev" aria-label="Mois précédent">‹</button>
+      <div style="text-align:center">
+        <h2 id="month"></h2>
+        <button class="link-btn" id="todayBtn">Aujourd'hui</button>
+      </div>
+      <button class="nav" id="next" aria-label="Mois suivant">›</button>
+    </div>
+    <div class="grid" id="grid"><div class="loading" style="grid-column:1/-1">Chargement…</div></div>
+  </section>
+
+  <div class="list-title"><span id="listTitle"></span><small id="listCount"></small></div>
+  <div id="list"></div>
+
+  <footer id="foot">Toutes les compétitions commencent à 8h00, sauf précision contraire.</footer>
+</main>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true"><div class="sheet" id="sheet"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+let DATA = { concours: [] };
+const today = new Date(); today.setHours(0,0,0,0);
+let view = new Date(today.getFullYear(), today.getMonth(), 1);
+let selected = null, cat = "", dept = "", query = "";
+
+function filtered(){
+  const q = query.trim().toLowerCase();
+  return DATA.concours.filter(c =>
+    (!cat || c.cat === cat) && (!dept || c.dept === dept) &&
+    (!q || [c.nom,c.club,c.dept,c.challenge,c.division,c.formule,c.adresse,c.info,c.systeme].join(" ").toLowerCase().includes(q)));
+}
+
+function renderFilters(){
+  const el = document.getElementById("filters");
+  const opts = [["", "Tout"], ...Object.entries(CATS).map(([k,v]) => [k, v.label])];
+  el.innerHTML = opts.map(([k,l]) =>
+    `<button class="chip ${k===cat?"on":""}" data-c="${k}">${k?`<i class="dot" style="background:${CATS[k].color}"></i>`:""}${l}</button>`).join("");
+  el.querySelectorAll(".chip").forEach(b => b.onclick = () => { cat = b.dataset.c; selected = null; render(); });
+}
+
+function renderCalendar(){
+  document.getElementById("month").textContent = `${MOIS[view.getMonth()]} ${view.getFullYear()}`;
+  const byDay = {};
+  filtered().forEach(c => joursDe(c).forEach(k => (byDay[k] ||= []).push(c)));
+  const offset = (view.getDay() + 6) % 7;
+  const start = new Date(view); start.setDate(1 - offset);
+  let html = JOURS.map(j => `<div class="dow">${j}</div>`).join("");
+  for (let i = 0; i < 42; i++){
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    if (i >= 35 && d.getMonth() !== view.getMonth()) break;
+    const k = dkey(d), evs = byDay[k] || [];
+    const cls = ["day", d.getMonth()!==view.getMonth()?"other":"", +d===+today?"today":"", k===selected?"sel":"", evs.length?"has":""].join(" ");
+    const dots = [...new Set(evs.map(e => e.cat))].slice(0,4)
+      .map(c => `<i class="dot" style="background:${k===selected?"#fff":(CATS[c]||CATS.pmo).color}"></i>`).join("");
+    html += `<button class="${cls}" data-k="${k}" aria-label="${d.getDate()} ${MOIS[d.getMonth()]}${evs.length?`, ${evs.length} concours`:""}">${d.getDate()}<span class="dots">${dots}</span></button>`;
+  }
+  const grid = document.getElementById("grid");
+  grid.innerHTML = html;
+  grid.querySelectorAll(".day").forEach(b => b.onclick = () => {
+    const k = b.dataset.k, d = parseD(k);
+    if (d.getMonth() !== view.getMonth()) view = new Date(d.getFullYear(), d.getMonth(), 1);
+    selected = selected === k ? null : k;
+    render();
+    if (selected) document.getElementById("listTitle").scrollIntoView({behavior:"smooth", block:"start"});
+  });
+}
+
+function renderList(){
+  let items = filtered(), title;
+  if (selected){
+    items = items.filter(c => joursDe(c).includes(selected));
+    title = parseD(selected).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+  } else {
+    const ym = `${view.getFullYear()}-${pad(view.getMonth()+1)}`;
+    items = items.filter(c => joursDe(c).some(k => k.startsWith(ym)));
+    title = `${MOIS[view.getMonth()]} ${view.getFullYear()}`;
+  }
+  items = trier(items);
+  document.getElementById("listTitle").textContent = title.charAt(0).toUpperCase() + title.slice(1);
+  document.getElementById("listCount").textContent = items.length ? `${items.length} concours` : "";
+  const list = document.getElementById("list");
+  if (!items.length){
+    list.innerHTML = `<div class="empty">Aucun concours ${selected ? "ce jour-là" : "ce mois-ci"}${cat||dept||query ? " avec ces filtres" : ""}.${selected ? "<br>Touchez à nouveau le jour pour revoir tout le mois." : ""}</div>`;
+    return;
+  }
+  list.innerHTML = items.map(c => {
+    const d = parseD(c.date), k = catOf(c);
+    const l = lieu(c), f = format(c);
+    return `<div class="ev ${c.statut==="Annulé"?"cancel":""}" style="border-left-color:${k.color}" data-id="${esc(c.id)}" tabindex="0" role="button">
+      <div class="ev-date"><b>${d.getDate()}</b><span>${JOURS[(d.getDay()+6)%7]}${c.fin&&c.fin>c.date?"+":""}</span></div>
+      <div class="ev-body">
+        <h3>${esc(titre(c))}${!c.nom && c.dept ? ` <span style="font-weight:400;color:var(--muted)">(${esc(c.dept)})</span>` : ""}${c.statut?`<span class="warn">${esc(c.statut)}</span>`:""}</h3>
+        <div class="meta"><span class="tag" style="background:${k.color}">${esc(k.label)}</span>${esc(f)}</div>
+        <div class="meta">${c.nom && l ? "📍 " + esc(l) + " · " : ""}${c.heure ? "🕗 " + esc(c.heure) : ""}${c.systeme ? " · " + esc(c.systeme) : ""}${c.challenge ? " · " + esc(c.challenge) : ""}</div>
+      </div></div>`;
+  }).join("");
+  list.querySelectorAll(".ev").forEach(e => {
+    const open = () => openDetail(DATA.concours.find(c => c.id === e.dataset.id));
+    e.onclick = open; e.onkeydown = ev => { if (ev.key === "Enter") open(); };
+  });
+}
+
+function openDetail(c){
+  const k = catOf(c);
+  const where = c.adresse || ["boulodrome", c.club, c.dept].filter(Boolean).join(" ");
+  const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(where)}`;
+  const tel = c.tel ? `<a href="tel:${c.tel.replace(/\s/g,"")}">${esc(c.tel)}</a>` : "";
+  const rows = [
+    ["Date", esc(dateTexte(c))],
+    ["Heure", esc(c.heure || (c.cat==="pmo"||c.cat==="loisir" ? "8h00 (horaire par défaut)" : ""))],
+    ["Club / lieu", esc([c.club, c.dept ? `(${c.dept})` : ""].filter(Boolean).join(" "))],
+    ["Adresse", esc(c.adresse)],
+    ["Type", esc(TYPES[c.type] || c.type)],
+    ["Format", esc(format(c))],
+    ["Déroulement", esc(c.systeme)],
+    ["Challenge", esc(c.challenge)],
+    ["Téléphone", tel],
+    ["Infos", esc(c.info)],
+    ["Statut", c.statut ? `<span class="warn" style="margin:0">${esc(c.statut)}</span>` : ""],
+  ].filter(r => r[1]).map(r => `<div class="row"><b>${r[0]}</b><span>${r[1]}</span></div>`).join("");
+  document.getElementById("sheet").innerHTML =
+    `<button class="close" aria-label="Fermer">✕</button>
+     <span class="tag" style="background:${k.color}">${esc(k.label)}</span>
+     <h3>${esc(titre(c))}</h3>${rows}
+     <a class="btn" href="${maps}" target="_blank" rel="noopener">📍 Itinéraire</a>${c.tel ? `<a class="btn alt" href="tel:${c.tel.replace(/\s/g,"")}">📞 Appeler</a>` : ""}`;
+  const m = document.getElementById("modal");
+  m.classList.add("open");
+  m.querySelector(".close").onclick = closeDetail;
+}
+function closeDetail(){ document.getElementById("modal").classList.remove("open"); }
+document.getElementById("modal").onclick = e => { if (e.target.id === "modal") closeDetail(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDetail(); });
+
+function shift(n){ view = new Date(view.getFullYear(), view.getMonth()+n, 1); selected = null; render(); }
+document.getElementById("prev").onclick = () => shift(-1);
+document.getElementById("next").onclick = () => shift(1);
+document.getElementById("todayBtn").onclick = () => { view = new Date(today.getFullYear(), today.getMonth(), 1); selected = dkey(today); render(); };
+document.getElementById("q").oninput = e => { query = e.target.value; selected = null; render(); };
+const deptSel = document.getElementById("dept");
+deptSel.innerHTML += DEPTS.map(d => `<option value="${d}">${d}</option>`).join("");
+deptSel.onchange = e => { dept = e.target.value; selected = null; render(); };
+
+let tx = null, ty = null;
+const gridEl = document.getElementById("grid");
+gridEl.addEventListener("touchstart", e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, {passive:true});
+gridEl.addEventListener("touchend", e => {
+  if (tx === null) return;
+  const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) shift(dx < 0 ? 1 : -1);
+  tx = null;
+});
+
+function render(){ renderFilters(); renderCalendar(); renderList(); }
+
+function showMeta(maj, secours){
+  document.getElementById("sub").textContent = `Île-de-France · Saison ${SAISON}`;
+  document.getElementById("foot").innerHTML =
+    `Toutes les compétitions commencent à 8h00, sauf précision contraire.<br>Source : ${esc(SOURCE)}` +
+    (maj ? `<br>Dernière mise à jour : ${esc(new Date(maj).toLocaleDateString("fr-FR"))}` : "") +
+    (secours ? `<br><b>Version de secours affichée</b> (base de données momentanément indisponible).` : "");
+}
+async function load(){
+  try {
+    const rows = await fetchConcours();
+    DATA = { concours: rows };
+    const maj = rows.reduce((m, r) => r.updated_at > m ? r.updated_at : m, "");
+    showMeta(maj, false);
+  } catch (e) {
+    // Secours : copie statique data.json (si Supabase est en pause ou pas encore configuré)
+    try {
+      const r = await fetch("data.json?v=" + Date.now(), {cache: "no-store"});
+      if (!r.ok) throw new Error(r.status);
+      const d = await r.json();
+      DATA = { concours: d.concours };
+      showMeta(d.maj, supabaseConfigured());
+    } catch {
+      document.getElementById("grid").innerHTML = `<div class="empty" style="grid-column:1/-1">Impossible de charger le calendrier. Réessayez plus tard.</div>`;
+      return;
+    }
+  }
+  render();
+}
+load();
+</script>
+</body>
+</html>
