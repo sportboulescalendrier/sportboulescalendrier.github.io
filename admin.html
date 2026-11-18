@@ -259,7 +259,8 @@ function errText(e){
   const m = (e && (e.message || e.error_description)) || String(e);
   if (/invalid login credentials/i.test(m)) return "E-mail ou mot de passe incorrect.";
   if (/email not confirmed/i.test(m)) return "Adresse e-mail pas encore confirmée.";
-  if (/row-level security|permission denied/i.test(m)) return "Action refusée : ce compte n'est pas administrateur.";
+  if (/permission denied for (table|schema|function)/i.test(m)) return "La base refuse l'accès aux tables : les droits ne sont pas encore donnés dans Supabase (lancez le correctif SQL « grant … »).";
+  if (/row-level security/i.test(m)) return "Action refusée : ce compte n'est pas administrateur (son e-mail n'est pas dans la table admins).";
   if (/failed to fetch|network/i.test(m)) return "Pas de connexion à la base. Vérifiez internet (ou que le projet Supabase n'est pas en pause).";
   if (/should be different/i.test(m)) return "Le nouveau mot de passe doit être différent de l'ancien.";
   if (/at least/i.test(m)) return "Mot de passe trop court.";
