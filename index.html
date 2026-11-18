@@ -85,6 +85,12 @@
   .btn.agbtn{background:var(--primary);color:#fff;border:none;font-size:1rem;cursor:pointer;font-family:inherit}
   .agchoix{display:flex;flex-direction:column;gap:8px;margin:10px 0 4px}
   .ag{display:block;text-align:left;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:12px 14px;font:inherit;font-size:.98rem;font-weight:600;text-decoration:none;cursor:pointer}
+  .sortbar{display:flex;align-items:center;gap:6px;margin:-2px 4px 10px;font-size:.82rem;color:var(--muted)}
+  .sortbar button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 11px;font:inherit;font-size:.82rem;cursor:pointer}
+  .sortbar button.on{background:var(--primary);border-color:var(--primary);color:#fff}
+  .dept-band{display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px;padding:8px 14px;border-radius:10px;background:var(--primary);color:#fff;font-weight:700;font-size:.95rem}
+  .dept-band:first-child{margin-top:0}
+  .dept-band small{background:rgba(255,255,255,.2);border-radius:999px;padding:2px 9px;font-weight:600}
   .past-title{margin:18px 4px 8px;font-size:.9rem;color:var(--muted);font-weight:600}
   .ev-date .yr{display:block;font-size:.7rem;color:var(--muted)}
   .hidden{display:none !important}
@@ -151,6 +157,7 @@
   </section>
 
   <div class="list-title"><span id="listTitle"></span><small id="listCount"></small></div>
+  <div class="sortbar" id="sortBar"><span>Trier par</span><button data-s="dept">Département</button><button data-s="date">Date</button></div>
   <div id="clubBox" class="sync clubbox hidden"></div>
   <div id="favSync" class="sync hidden"></div>
   <div id="list"></div>
@@ -178,6 +185,11 @@ let depts = new Set();
 try { depts = new Set(JSON.parse(localStorage.getItem(DEPT_KEY) || "[]").filter(d => DEPTS.includes(d))); } catch {}
 function saveDepts(){ try { localStorage.setItem(DEPT_KEY, JSON.stringify([...depts])); } catch {} }
 // Les épreuves hors Île-de-France ou sans département (nationales…) restent toujours visibles
+/* ---------- Tri de la liste : par département (bandeaux) ou par date, mémorisé ---------- */
+const SORT_KEY = "lyonnaise-tri";
+let sortMode = "dept";
+try { sortMode = localStorage.getItem(SORT_KEY) || "dept"; } catch {}
+const deptRang = c => { const i = DEPTS.indexOf(c.dept); return i >= 0 ? i : 99; };
 const DEPT_NOMS = { "75":"Paris", "77":"Seine-et-Marne", "78":"Yvelines", "91":"Essonne", "92":"Hauts-de-Seine", "93":"Seine-Saint-Denis", "94":"Val-de-Marne", "95":"Val-d'Oise" };
 const deptOk = c => !depts.size || !DEPTS.includes(c.dept) || depts.has(c.dept);
 
@@ -324,6 +336,11 @@ function renderList(){
     title = `${MOIS[view.getMonth()]} ${view.getFullYear()}`;
   }
   if (!listMode) items = trier(items);
+  const parDept = !listMode && sortMode === "dept";
+  if (parDept) items = items.slice().sort((a, b) => deptRang(a) - deptRang(b) || (a.dept || "").localeCompare(b.dept || ""));  // tri stable : la date reste l'ordre secondaire
+  const sb = document.getElementById("sortBar");
+  sb.classList.toggle("hidden", listMode);
+  sb.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.s === sortMode));
   document.getElementById("listTitle").textContent = title.charAt(0).toUpperCase() + title.slice(1);
   document.getElementById("listCount").textContent = items.length ? `${items.length} concours` : "";
   const list = document.getElementById("list");
@@ -339,11 +356,20 @@ function renderList(){
     list.innerHTML = `<div class="empty">Aucun concours ${selected ? "ce jour-là" : "ce mois-ci"}${cat||depts.size||query ? " avec ces filtres" : ""}.${selected ? "<br>Touchez à nouveau le jour pour revoir tout le mois." : ""}</div>`;
     return;
   }
-  let pastHeader = false;
+  let pastHeader = false, lastDept = null;
+  const nbParDept = {}; if (parDept) items.forEach(c => { const k = deptRang(c) < 99 ? c.dept : "autres"; nbParDept[k] = (nbParDept[k] || 0) + 1; });
   list.innerHTML = items.map(c => {
     const d = parseD(c.date), k = catOf(c);
     const past = listMode && pastConcours(c);
-    const sep = past && !pastHeader ? (pastHeader = true, `<div class="past-title">Déjà passés</div>`) : "";
+    let sep = past && !pastHeader ? (pastHeader = true, `<div class="past-title">Déjà passés</div>`) : "";
+    if (parDept){
+      const k = deptRang(c) < 99 ? c.dept : "autres";
+      if (k !== lastDept){
+        lastDept = k;
+        const nom = k === "autres" ? "Hors Île-de-France / national" : `${k} · ${DEPT_NOMS[k] || ""}`;
+        sep += `<div class="dept-band"><span>${esc(nom)}</span><small>${nbParDept[k]}</small></div>`;
+      }
+    }
     const l = lieu(c), f = format(c);
     return sep + `<div class="ev ${c.statut==="Annulé"?"cancel":""} ${past?"past":""}" style="border-left-color:${k.color}" data-id="${esc(c.id)}" tabindex="0" role="button">
       <div class="ev-date"><b>${d.getDate()}</b><span>${listMode ? d.toLocaleDateString("fr-FR",{month:"short"}) : JOURS[(d.getDay()+6)%7]}${c.fin&&c.fin>c.date?"+":""}</span>${listMode ? `<span class="yr">${d.getFullYear()}</span>` : ""}</div>
@@ -533,6 +559,10 @@ themeBtn.onclick = () => {
   try { localStorage.setItem("lyonnaise-theme", t); } catch {}
   applyTheme(t);
 };
+
+document.getElementById("sortBar").querySelectorAll("button").forEach(b => b.onclick = () => {
+  sortMode = b.dataset.s; try { localStorage.setItem(SORT_KEY, sortMode); } catch {} renderList();
+});
 
 function render(){ renderFilters(); renderCalendar(); renderList(); }
 
