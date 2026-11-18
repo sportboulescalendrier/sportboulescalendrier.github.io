@@ -42,6 +42,10 @@
   .list-title small{color:var(--muted);font-weight:400;white-space:nowrap}
   .ev{display:flex;gap:12px;background:#fff;border-radius:14px;padding:16px 14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.05);cursor:pointer;border-left:5px solid var(--primary)}
   .ev.cancel{opacity:.55}
+  .ev.past{opacity:.6}
+  .past-title{margin:18px 4px 8px;font-size:.9rem;color:var(--muted);font-weight:600}
+  .ev-date .yr{display:block;font-size:.7rem;color:var(--muted)}
+  .hidden{display:none !important}
   .ev.cancel h3{text-decoration:line-through}
   .ev-date{flex:0 0 52px;text-align:center}
   .ev-date b{display:block;font-size:1.7rem;line-height:1}
@@ -90,7 +94,7 @@
   </div>
   <div class="filters" id="filters"></div>
 
-  <section class="card">
+  <section class="card" id="calCard">
     <div class="cal-head">
       <button class="nav" id="prev" aria-label="Mois précédent">‹</button>
       <div style="text-align:center">
@@ -139,7 +143,7 @@ function filtered(){
 function renderFilters(){
   const el = document.getElementById("filters");
   const opts = [["", "Tout"], ...Object.entries(CATS).map(([k,v]) => [k, v.label])];
-  const nFav = DATA.concours.filter(c => isFav(c) && !pastConcours(c)).length;
+  const nFav = DATA.concours.filter(isFav).length;
   el.innerHTML = `<button class="chip favchip ${favMode?"on":""}" id="favChip">★ Mes favoris${nFav?` (${nFav})`:""}</button>` +
     opts.map(([k,l]) =>
     `<button class="chip ${k===cat&&!favMode?"on":""}" data-c="${k}">${k?`<i class="dot" style="background:${CATS[k].color}"></i>`:""}${l}</button>`).join("");
@@ -176,34 +180,40 @@ function renderCalendar(){
 
 function renderList(){
   let items = filtered(), title;
-  if (selected){
+  document.getElementById("calCard").classList.toggle("hidden", favMode);
+  if (favMode){
+    // Tous les favoris, sans lien avec le mois affiché : à venir d'abord, puis les passés
+    const all = trier(items);
+    items = [...all.filter(c => !pastConcours(c)), ...all.filter(pastConcours).reverse()];
+    title = "Mes favoris";
+  } else if (selected){
     items = items.filter(c => joursDe(c).includes(selected));
     title = parseD(selected).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
-  } else if (favMode){
-    items = items.filter(c => !pastConcours(c));
-    title = "Mes favoris à venir";
   } else {
     const ym = `${view.getFullYear()}-${pad(view.getMonth()+1)}`;
     items = items.filter(c => joursDe(c).some(k => k.startsWith(ym)));
     title = `${MOIS[view.getMonth()]} ${view.getFullYear()}`;
   }
-  items = trier(items);
+  if (!favMode) items = trier(items);
   document.getElementById("listTitle").textContent = title.charAt(0).toUpperCase() + title.slice(1);
   document.getElementById("listCount").textContent = items.length ? `${items.length} concours` : "";
   const list = document.getElementById("list");
-  if (!items.length && favMode && !selected){
-    list.innerHTML = `<div class="empty">Aucun favori à venir.<br>Touchez l'étoile ☆ d'un concours pour l'ajouter à vos favoris.</div>`;
+  if (!items.length && favMode){
+    list.innerHTML = `<div class="empty">Aucun favori pour l'instant.<br>Touchez l'étoile ☆ d'un concours pour l'ajouter à vos favoris.</div>`;
     return;
   }
   if (!items.length){
     list.innerHTML = `<div class="empty">Aucun concours ${selected ? "ce jour-là" : "ce mois-ci"}${cat||dept||query ? " avec ces filtres" : ""}.${selected ? "<br>Touchez à nouveau le jour pour revoir tout le mois." : ""}</div>`;
     return;
   }
+  let pastHeader = false;
   list.innerHTML = items.map(c => {
     const d = parseD(c.date), k = catOf(c);
+    const past = favMode && pastConcours(c);
+    const sep = past && !pastHeader ? (pastHeader = true, `<div class="past-title">Déjà passés</div>`) : "";
     const l = lieu(c), f = format(c);
-    return `<div class="ev ${c.statut==="Annulé"?"cancel":""}" style="border-left-color:${k.color}" data-id="${esc(c.id)}" tabindex="0" role="button">
-      <div class="ev-date"><b>${d.getDate()}</b><span>${favMode&&!selected ? d.toLocaleDateString("fr-FR",{month:"short"}) : JOURS[(d.getDay()+6)%7]}${c.fin&&c.fin>c.date?"+":""}</span></div>
+    return sep + `<div class="ev ${c.statut==="Annulé"?"cancel":""} ${past?"past":""}" style="border-left-color:${k.color}" data-id="${esc(c.id)}" tabindex="0" role="button">
+      <div class="ev-date"><b>${d.getDate()}</b><span>${favMode ? d.toLocaleDateString("fr-FR",{month:"short"}) : JOURS[(d.getDay()+6)%7]}${c.fin&&c.fin>c.date?"+":""}</span>${favMode ? `<span class="yr">${d.getFullYear()}</span>` : ""}</div>
       <div class="ev-body">
         <h3>${esc(titre(c))}${!c.nom && c.dept ? ` <span style="font-weight:400;color:var(--muted)">(${esc(c.dept)})</span>` : ""}${c.statut?`<span class="warn">${esc(c.statut)}</span>`:""}</h3>
         <div class="meta"><span class="tag" style="background:${k.color}">${esc(k.label)}</span>${esc(f)}</div>
