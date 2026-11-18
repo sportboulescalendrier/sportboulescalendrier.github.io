@@ -82,6 +82,9 @@
   .club-line{font-size:.95rem;margin:4px 0;color:var(--ink)}
   .club-line a{color:inherit}
   .clubbox .btn{margin-top:10px}
+  .btn.agbtn{background:var(--primary);color:#fff;border:none;font-size:1rem;cursor:pointer;font-family:inherit}
+  .agchoix{display:flex;flex-direction:column;gap:8px;margin:10px 0 4px}
+  .ag{display:block;text-align:left;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:12px 14px;font:inherit;font-size:.98rem;font-weight:600;text-decoration:none;cursor:pointer}
   .past-title{margin:18px 4px 8px;font-size:.9rem;color:var(--muted);font-weight:600}
   .ev-date .yr{display:block;font-size:.7rem;color:var(--muted)}
   .hidden{display:none !important}
@@ -96,7 +99,7 @@
   .day{position:relative}
   .day.favday::after{content:"★";position:absolute;top:2px;right:4px;font-size:.62rem;color:#f2a900}
   .day.sel.favday::after{color:#ffd34d}
-  .btn.favbtn{background:var(--card)4d6;color:#8a5a00;border:none;font-size:1rem;cursor:pointer;font-family:inherit}
+  .btn.favbtn{background:#fff4d6;color:#8a5a00;border:none;font-size:1rem;cursor:pointer;font-family:inherit}
   .ev h3{margin:0 0 5px;font-size:1.15rem}
   .meta{font-size:.95rem;color:var(--muted);line-height:1.5}
   .tag{display:inline-block;font-size:.76rem;font-weight:700;padding:2px 7px;border-radius:6px;color:#fff;margin-right:5px;vertical-align:1px}
@@ -362,6 +365,57 @@ function wazeUrl(c){
   const where = c.adresse || ["boulodrome", c.club, c.dept].filter(Boolean).join(" ");
   return `https://waze.com/ul?q=${encodeURIComponent(where)}&navigate=yes`;
 }
+/* ---------- Ajout à l'agenda du téléphone ---------- */
+function horaires(c){
+  // Renvoie {allDay, start:"YYYYMMDD[THHMMSS]", end:...}
+  const ymd = d => d.replace(/-/g, "");
+  const m = /(\d{1,2})\s*h\s*(\d{2})?/i.exec(c.heure || "");
+  if (!m || (c.fin && c.fin > c.date)) {
+    const end = parseD(c.fin && c.fin > c.date ? c.fin : c.date); end.setDate(end.getDate() + 1);
+    return { allDay: true, start: ymd(c.date), end: dkey(end).replace(/-/g, "") };
+  }
+  const h = +m[1], mn = +(m[2] || 0);
+  const fin = Math.min(h + 8, 23);   // durée indicative de la journée de concours
+  return { allDay: false, start: `${ymd(c.date)}T${pad(h)}${pad(mn)}00`, end: `${ymd(c.date)}T${pad(fin)}${pad(mn)}00` };
+}
+function agendaTexte(c){
+  return [format(c), c.systeme, c.challenge, c.tel ? "Tél. " + c.tel : "", c.info, location.origin + location.pathname]
+    .filter(Boolean).join("\n");
+}
+const agendaLieu = c => c.adresse || [c.club, c.dept ? "(" + c.dept + ")" : ""].filter(Boolean).join(" ");
+function googleAgendaUrl(c){
+  const t = horaires(c);
+  const q = new URLSearchParams({ action: "TEMPLATE", text: titre(c) + (c.nom ? "" : " – concours de lyonnaise"),
+    dates: t.start + "/" + t.end, details: agendaTexte(c), location: agendaLieu(c), ctz: "Europe/Paris" });
+  return "https://calendar.google.com/calendar/render?" + q.toString();
+}
+function telechargerIcs(c){
+  const t = horaires(c);
+  const e = v => String(v).replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/([,;])/g, "\\$1");
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Concours de Lyonnaise//FR", "CALSCALE:GREGORIAN", "BEGIN:VEVENT",
+    `UID:${c.id}@sportboulescalendrier`, `DTSTAMP:${stamp}`,
+    t.allDay ? `DTSTART;VALUE=DATE:${t.start}` : `DTSTART:${t.start}`,
+    t.allDay ? `DTEND;VALUE=DATE:${t.end}` : `DTEND:${t.end}`,
+    `SUMMARY:${e(titre(c) + (c.nom ? "" : " – concours de lyonnaise"))}`,
+    `LOCATION:${e(agendaLieu(c))}`, `DESCRIPTION:${e(agendaTexte(c))}`,
+    "BEGIN:VALARM", "TRIGGER:-P1D", "ACTION:DISPLAY", "DESCRIPTION:Concours demain", "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `concours-${c.date}-${(c.club || "lyonnaise").replace(/[^a-z0-9]+/gi, "-")}.ics`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+function choixAgenda(c){
+  const box = document.getElementById("agendaChoix");
+  box.classList.toggle("hidden");
+  box.innerHTML = `<button class="ag" id="agIcs">📱 iPhone / Outlook / autre agenda</button>
+    <a class="ag" href="${googleAgendaUrl(c)}" target="_blank" rel="noopener">🗓️ Google Agenda (Android)</a>`;
+  document.getElementById("agIcs").onclick = () => telechargerIcs(c);
+}
+
 function showClub(key){
   clubKey = key; favMode = false; selected = null; closeDetail(); render();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -410,10 +464,12 @@ function openDetail(c){
      <span class="tag" style="background:${k.color}">${esc(k.label)}</span>
      <h3>${esc(titre(c))}</h3>${rows}
      <button class="btn favbtn" id="favBtn">${isFav(c) ? "★ Dans mes favoris" : "☆ Ajouter aux favoris"}</button>
+     <button class="btn agbtn" id="agendaBtn">📅 Ajouter à mon agenda</button><div id="agendaChoix" class="agchoix hidden"></div>
      <a class="btn waze" href="${waze}" target="_blank" rel="noopener"><img src="waze.png" alt="" width="26" height="26">Waze</a>${c.tel ? `<a class="btn alt" href="tel:${c.tel.replace(/\s/g,"")}">📞 Appeler</a>` : ""}`;
   const m = document.getElementById("modal");
   m.classList.add("open");
   m.querySelector(".close").onclick = closeDetail;
+  document.getElementById("agendaBtn").onclick = () => choixAgenda(c);
   const cl = document.getElementById("clubLink");
   if (cl) cl.onclick = () => showClub(clubKeyOf(c));
   document.getElementById("favBtn").onclick = () => { toggleFav(c.id); render(); openDetail(c); };
