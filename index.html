@@ -67,6 +67,7 @@
   .row a{color:var(--primary)}
   .close{float:right;border:none;background:var(--soft);border-radius:50%;width:36px;height:36px;font-size:1.1rem;cursor:pointer}
   .btn{display:inline-block;margin:14px 8px 0 0;background:var(--accent);color:#fff;text-decoration:none;padding:10px 16px;border-radius:10px;font-weight:600}
+  .btn.waze{background:#33ccff;color:#062a3a}
   .btn.alt{background:var(--soft);color:var(--primary)}
   footer{text-align:center;font-size:.75rem;color:var(--muted);margin-top:24px;line-height:1.6}
   .loading{text-align:center;padding:40px;color:var(--muted)}
@@ -216,6 +217,7 @@ function openDetail(c){
   const k = catOf(c);
   const where = c.adresse || ["boulodrome", c.club, c.dept].filter(Boolean).join(" ");
   const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(where)}`;
+  const waze = `https://waze.com/ul?q=${encodeURIComponent(where)}&navigate=yes`;
   const tel = c.tel ? `<a href="tel:${c.tel.replace(/\s/g,"")}">${esc(c.tel)}</a>` : "";
   const rows = [
     ["Date", esc(dateTexte(c))],
@@ -238,7 +240,7 @@ function openDetail(c){
      <span class="tag" style="background:${k.color}">${esc(k.label)}</span>
      <h3>${esc(titre(c))}</h3>${rows}
      <button class="btn favbtn" id="favBtn">${isFav(c) ? "★ Dans mes favoris" : "☆ Ajouter aux favoris"}</button>
-     <a class="btn" href="${maps}" target="_blank" rel="noopener">📍 Itinéraire</a>${c.tel ? `<a class="btn alt" href="tel:${c.tel.replace(/\s/g,"")}">📞 Appeler</a>` : ""}`;
+     <a class="btn" href="${maps}" target="_blank" rel="noopener">📍 Google Maps</a><a class="btn waze" href="${waze}" target="_blank" rel="noopener">🚗 Waze</a>${c.tel ? `<a class="btn alt" href="tel:${c.tel.replace(/\s/g,"")}">📞 Appeler</a>` : ""}`;
   const m = document.getElementById("modal");
   m.classList.add("open");
   m.querySelector(".close").onclick = closeDetail;
