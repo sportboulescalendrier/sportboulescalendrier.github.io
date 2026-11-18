@@ -74,6 +74,14 @@
   .sbtn{border:none;border-radius:10px;padding:9px 14px;font-size:.92rem;font-weight:600;cursor:pointer;background:var(--primary);color:#fff;font-family:inherit}
   .sbtn.ghost{background:var(--soft);color:var(--primary)}
   .sync-input{width:100%;background:var(--card);color:var(--ink);padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:1.3rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .clublink{border:none;background:none;padding:0;font:inherit;color:var(--primary);font-weight:600;text-decoration:underline;cursor:pointer;text-align:left}
+  :root[data-theme="dark"] .clublink{color:#9cc4f2}
+  .clubbox .back{border:none;background:var(--soft);color:var(--ink);border-radius:9px;padding:7px 12px;font:inherit;font-size:.9rem;font-weight:600;cursor:pointer;margin-bottom:10px}
+  .club-name{font-size:1.35rem;font-weight:800;margin-bottom:6px}
+  .club-name span{font-weight:400;color:var(--muted)}
+  .club-line{font-size:.95rem;margin:4px 0;color:var(--ink)}
+  .club-line a{color:inherit}
+  .clubbox .btn{margin-top:10px}
   .past-title{margin:18px 4px 8px;font-size:.9rem;color:var(--muted);font-weight:600}
   .ev-date .yr{display:block;font-size:.7rem;color:var(--muted)}
   .hidden{display:none !important}
@@ -140,6 +148,7 @@
   </section>
 
   <div class="list-title"><span id="listTitle"></span><small id="listCount"></small></div>
+  <div id="clubBox" class="sync clubbox hidden"></div>
   <div id="favSync" class="sync hidden"></div>
   <div id="list"></div>
 
@@ -156,7 +165,9 @@
 let DATA = { concours: [] };
 const today = new Date(); today.setHours(0,0,0,0);
 let view = new Date(today.getFullYear(), today.getMonth(), 1);
-let selected = null, cat = "", query = "", favMode = false;
+let selected = null, cat = "", query = "", favMode = false, clubKey = "";
+// Identifiant du club d'un concours (club de la base, sinon lieu libre)
+const clubKeyOf = c => (c.db && c.db.club_id) ? c.db.club_id : (c.club ? "lieu:" + c.club + "|" + (c.dept || "") : "");
 
 /* ---------- Départements choisis : plusieurs possibles, mémorisés dans le navigateur ---------- */
 const DEPT_KEY = "lyonnaise-departements";
@@ -240,6 +251,7 @@ const isFav = c => favs.has(c.id);
 const pastConcours = c => (c.fin || c.date) < dkey(today);
 
 function filtered(){
+  if (clubKey) return DATA.concours.filter(c => clubKeyOf(c) === clubKey);
   const q = query.trim().toLowerCase();
   return DATA.concours.filter(c =>
     (!favMode || isFav(c)) && (!cat || c.cat === cat) && deptOk(c) &&
@@ -253,8 +265,8 @@ function renderFilters(){
   el.innerHTML = `<button class="chip favchip ${favMode?"on":""}" id="favChip">★ Mes favoris${nFav?` (${nFav})`:""}</button>` +
     opts.map(([k,l]) =>
     `<button class="chip ${k===cat&&!favMode?"on":""}" data-c="${k}">${k?`<i class="dot" style="background:${CATS[k].color}"></i>`:""}${l}</button>`).join("");
-  el.querySelectorAll(".chip[data-c]").forEach(b => b.onclick = () => { cat = b.dataset.c; favMode = false; selected = null; render(); });
-  document.getElementById("favChip").onclick = () => { favMode = !favMode; cat = ""; selected = null; render(); };
+  el.querySelectorAll(".chip[data-c]").forEach(b => b.onclick = () => { cat = b.dataset.c; favMode = false; clubKey = ""; selected = null; render(); });
+  document.getElementById("favChip").onclick = () => { favMode = !favMode; clubKey = ""; cat = ""; selected = null; render(); };
 }
 
 function renderCalendar(){
@@ -286,9 +298,15 @@ function renderCalendar(){
 
 function renderList(){
   let items = filtered(), title;
-  document.getElementById("calCard").classList.toggle("hidden", favMode);
-  if (!favMode) document.getElementById("favSync").classList.add("hidden");
-  if (favMode){
+  const listMode = favMode || !!clubKey;
+  document.getElementById("calCard").classList.toggle("hidden", listMode);
+  if (!favMode || clubKey) document.getElementById("favSync").classList.add("hidden");
+  renderClubBox();
+  if (clubKey){
+    const all = trier(items);
+    items = [...all.filter(c => !pastConcours(c)), ...all.filter(pastConcours).reverse()];
+    title = "Concours du club";
+  } else if (favMode){
     // Tous les favoris, sans lien avec le mois affiché : à venir d'abord, puis les passés
     const all = trier(items);
     items = [...all.filter(c => !pastConcours(c)), ...all.filter(pastConcours).reverse()];
@@ -302,10 +320,14 @@ function renderList(){
     items = items.filter(c => joursDe(c).some(k => k.startsWith(ym)));
     title = `${MOIS[view.getMonth()]} ${view.getFullYear()}`;
   }
-  if (!favMode) items = trier(items);
+  if (!listMode) items = trier(items);
   document.getElementById("listTitle").textContent = title.charAt(0).toUpperCase() + title.slice(1);
   document.getElementById("listCount").textContent = items.length ? `${items.length} concours` : "";
   const list = document.getElementById("list");
+  if (!items.length && clubKey){
+    list.innerHTML = `<div class="empty">Aucun concours pour ce club.</div>`;
+    return;
+  }
   if (!items.length && favMode){
     list.innerHTML = `<div class="empty">Aucun favori pour l'instant.<br>Touchez l'étoile ☆ d'un concours pour l'ajouter à vos favoris.</div>`;
     return;
@@ -317,11 +339,11 @@ function renderList(){
   let pastHeader = false;
   list.innerHTML = items.map(c => {
     const d = parseD(c.date), k = catOf(c);
-    const past = favMode && pastConcours(c);
+    const past = listMode && pastConcours(c);
     const sep = past && !pastHeader ? (pastHeader = true, `<div class="past-title">Déjà passés</div>`) : "";
     const l = lieu(c), f = format(c);
     return sep + `<div class="ev ${c.statut==="Annulé"?"cancel":""} ${past?"past":""}" style="border-left-color:${k.color}" data-id="${esc(c.id)}" tabindex="0" role="button">
-      <div class="ev-date"><b>${d.getDate()}</b><span>${favMode ? d.toLocaleDateString("fr-FR",{month:"short"}) : JOURS[(d.getDay()+6)%7]}${c.fin&&c.fin>c.date?"+":""}</span>${favMode ? `<span class="yr">${d.getFullYear()}</span>` : ""}</div>
+      <div class="ev-date"><b>${d.getDate()}</b><span>${listMode ? d.toLocaleDateString("fr-FR",{month:"short"}) : JOURS[(d.getDay()+6)%7]}${c.fin&&c.fin>c.date?"+":""}</span>${listMode ? `<span class="yr">${d.getFullYear()}</span>` : ""}</div>
       <div class="ev-body">
         <h3>${esc(titre(c))}${!c.nom && c.dept ? ` <span style="font-weight:400;color:var(--muted)">(${esc(c.dept)})</span>` : ""}${c.statut?`<span class="warn">${esc(c.statut)}</span>`:""}</h3>
         <div class="meta"><span class="tag" style="background:${k.color}">${esc(k.label)}</span>${esc(f)}</div>
@@ -340,6 +362,29 @@ function wazeUrl(c){
   const where = c.adresse || ["boulodrome", c.club, c.dept].filter(Boolean).join(" ");
   return `https://waze.com/ul?q=${encodeURIComponent(where)}&navigate=yes`;
 }
+function showClub(key){
+  clubKey = key; favMode = false; selected = null; closeDetail(); render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function renderClubBox(){
+  const box = document.getElementById("clubBox");
+  if (!clubKey){ box.classList.add("hidden"); return; }
+  const ref = DATA.concours.find(c => clubKeyOf(c) === clubKey);
+  if (!ref){ clubKey = ""; box.classList.add("hidden"); return; }
+  const tel = ref.clubObj ? ref.clubObj.tel : ref.tel;
+  const lignes = [
+    ref.adresse ? `📍 ${esc(ref.adresse)}` : "",
+    tel ? `📞 <a href="tel:${tel.replace(/\s/g,"")}">${esc(tel)}</a>` : "",
+    ref.contact ? `👤 ${esc(ref.contact)}` : "",
+    ref.email ? `✉️ <a href="mailto:${esc(ref.email)}">${esc(ref.email)}</a>` : "",
+    ref.clubInfo ? `ℹ️ ${esc(ref.clubInfo)}` : "",
+  ].filter(Boolean).map(l => `<div class="club-line">${l}</div>`).join("");
+  box.classList.remove("hidden");
+  box.innerHTML = `<button class="back" id="clubBack">‹ Retour au calendrier</button>
+    <div class="club-name">${esc(ref.club)}${ref.dept ? ` <span>(${esc(ref.dept)})</span>` : ""}</div>${lignes}
+    <a class="btn waze" href="${wazeUrl(ref)}" target="_blank" rel="noopener"><img src="waze.png" alt="" width="26" height="26">Waze</a>`;
+  document.getElementById("clubBack").onclick = () => { clubKey = ""; render(); };
+}
 function openDetail(c){
   const k = catOf(c);
   const waze = wazeUrl(c);
@@ -347,7 +392,7 @@ function openDetail(c){
   const rows = [
     ["Date", esc(dateTexte(c))],
     ["Heure", esc(c.heure)],
-    ["Club / lieu", esc([c.club, c.dept ? `(${c.dept})` : ""].filter(Boolean).join(" "))],
+    ["Club / lieu", c.club ? `<button class="clublink" id="clubLink">${esc([c.club, c.dept ? `(${c.dept})` : ""].filter(Boolean).join(" "))} ›</button>` : ""],
     ["Adresse", esc(c.adresse)],
     ["Type", esc(TYPES[c.type] || c.type)],
     ["Format", esc(format(c))],
@@ -369,6 +414,8 @@ function openDetail(c){
   const m = document.getElementById("modal");
   m.classList.add("open");
   m.querySelector(".close").onclick = closeDetail;
+  const cl = document.getElementById("clubLink");
+  if (cl) cl.onclick = () => showClub(clubKeyOf(c));
   document.getElementById("favBtn").onclick = () => { toggleFav(c.id); render(); openDetail(c); };
 }
 function closeDetail(){ document.getElementById("modal").classList.remove("open"); }
