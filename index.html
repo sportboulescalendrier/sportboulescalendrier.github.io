@@ -21,7 +21,12 @@
   .search{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:1rem;background:#fff}
   .deptbtn{flex:0 0 auto;max-width:45%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:.95rem;background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:inherit}
   .deptbtn.on{background:var(--primary);border-color:var(--primary);color:#fff}
-  .deptpanel{display:flex;flex-wrap:wrap;gap:7px;margin:-2px 0 12px;padding:10px;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .deptpanel{position:absolute;right:0;top:calc(100% + 6px);z-index:8;width:260px;max-width:calc(100vw - 24px);background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:6px 0}
+  .drow{display:flex;align-items:center;gap:12px;padding:10px 16px;font-size:1rem;cursor:pointer}
+  .drow:active{background:var(--soft)}
+  .drow input{width:20px;height:20px;accent-color:var(--primary);margin:0}
+  .drow:first-child{border-bottom:1px solid var(--line)}
+  .dok{display:block;margin:6px 12px 6px auto;border:none;background:var(--primary);color:#fff;font-weight:600;border-radius:9px;padding:8px 18px;font-size:.95rem;cursor:pointer;font-family:inherit}
   select{padding:10px;border:1px solid var(--line);border-radius:10px;font-size:.95rem;background:#fff;color:var(--ink)}
   .filters{display:flex;gap:7px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
   .filters::-webkit-scrollbar{display:none}
@@ -91,11 +96,11 @@
 </header>
 
 <main>
-  <div class="tools">
+  <div class="tools" style="position:relative">
     <input class="search" id="q" type="search" placeholder="Club, ville, challenge…" aria-label="Rechercher">
     <button class="deptbtn" id="deptBtn" aria-expanded="false" aria-controls="deptPanel">Tous dép. ▾</button>
+    <div class="deptpanel hidden" id="deptPanel" role="group" aria-label="Départements"></div>
   </div>
-  <div class="deptpanel hidden" id="deptPanel" role="group" aria-label="Départements"></div>
   <div class="filters" id="filters"></div>
 
   <section class="card" id="calCard">
@@ -134,6 +139,7 @@ let depts = new Set();
 try { depts = new Set(JSON.parse(localStorage.getItem(DEPT_KEY) || "[]").filter(d => DEPTS.includes(d))); } catch {}
 function saveDepts(){ try { localStorage.setItem(DEPT_KEY, JSON.stringify([...depts])); } catch {} }
 // Les épreuves hors Île-de-France ou sans département (nationales…) restent toujours visibles
+const DEPT_NOMS = { "75":"Paris", "77":"Seine-et-Marne", "78":"Yvelines", "91":"Essonne", "92":"Hauts-de-Seine", "93":"Seine-Saint-Denis", "94":"Val-de-Marne", "95":"Val-d'Oise" };
 const deptOk = c => !depts.size || !DEPTS.includes(c.dept) || depts.has(c.dept);
 
 /* ---------- Favoris : mémorisés dans le navigateur du visiteur ---------- */
@@ -288,19 +294,26 @@ const deptBtn = document.getElementById("deptBtn"), deptPanel = document.getElem
 function renderDepts(){
   deptBtn.textContent = (depts.size ? [...depts].sort().join(", ") : "Tous dép.") + " ▾";
   deptBtn.classList.toggle("on", depts.size > 0);
-  deptPanel.innerHTML = `<button class="chip ${depts.size ? "" : "on"}" data-d="">Tous</button>` +
-    DEPTS.map(d => `<button class="chip ${depts.has(d) ? "on" : ""}" data-d="${d}" aria-pressed="${depts.has(d)}">${d}</button>`).join("");
-  deptPanel.querySelectorAll(".chip").forEach(b => b.onclick = () => {
-    const d = b.dataset.d;
-    if (!d) depts.clear(); else depts.has(d) ? depts.delete(d) : depts.add(d);
+  const row = (d, label, on) => `<label class="drow"><input type="checkbox" data-d="${d}" ${on ? "checked" : ""}><span>${label}</span></label>`;
+  deptPanel.innerHTML = row("", "Tous les départements", !depts.size) +
+    DEPTS.map(d => row(d, `<b>${d}</b> ${DEPT_NOMS[d] || ""}`, depts.has(d))).join("") +
+    `<button class="dok" id="deptOk">OK</button>`;
+  deptPanel.querySelectorAll("input").forEach(cb => cb.onchange = () => {
+    const d = cb.dataset.d;
+    if (!d) depts.clear(); else cb.checked ? depts.add(d) : depts.delete(d);
     if (depts.size === DEPTS.length) depts.clear();
     saveDepts(); selected = null; renderDepts(); render();
   });
+  document.getElementById("deptOk").onclick = closeDepts;
 }
-deptBtn.onclick = () => {
+function closeDepts(){ deptPanel.classList.add("hidden"); deptBtn.setAttribute("aria-expanded", "false"); }
+deptBtn.onclick = ev => {
+  ev.stopPropagation();
   const open = deptPanel.classList.toggle("hidden") === false;
   deptBtn.setAttribute("aria-expanded", open);
 };
+deptPanel.onclick = ev => ev.stopPropagation();
+document.addEventListener("click", closeDepts);
 renderDepts();
 
 let tx = null, ty = null;
