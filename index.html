@@ -100,7 +100,7 @@
   <div class="list-title"><span id="listTitle"></span><small id="listCount"></small></div>
   <div id="list"></div>
 
-  <footer id="foot">Toutes les compétitions commencent à 8h00, sauf précision contraire.</footer>
+  <footer id="foot"></footer>
 </main>
 
 <div class="modal" id="modal" role="dialog" aria-modal="true"><div class="sheet" id="sheet"></div></div>
@@ -219,7 +219,7 @@ function openDetail(c){
   const tel = c.tel ? `<a href="tel:${c.tel.replace(/\s/g,"")}">${esc(c.tel)}</a>` : "";
   const rows = [
     ["Date", esc(dateTexte(c))],
-    ["Heure", esc(c.heure || (c.cat==="pmo"||c.cat==="loisir" ? "8h00 (horaire par défaut)" : ""))],
+    ["Heure", esc(c.heure)],
     ["Club / lieu", esc([c.club, c.dept ? `(${c.dept})` : ""].filter(Boolean).join(" "))],
     ["Adresse", esc(c.adresse)],
     ["Type", esc(TYPES[c.type] || c.type)],
@@ -272,7 +272,7 @@ function render(){ renderFilters(); renderCalendar(); renderList(); }
 function showMeta(maj, secours){
   document.getElementById("sub").textContent = `Île-de-France · Saison ${SAISON}`;
   document.getElementById("foot").innerHTML =
-    `Toutes les compétitions commencent à 8h00, sauf précision contraire.<br>Source : ${esc(SOURCE)}` +
+    `Source : ${esc(SOURCE)}` +
     (maj ? `<br>Dernière mise à jour : ${esc(new Date(maj).toLocaleDateString("fr-FR"))}` : "") +
     (secours ? `<br><b>Version de secours affichée</b> (base de données momentanément indisponible).` : "");
 }
