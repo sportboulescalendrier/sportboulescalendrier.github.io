@@ -44,6 +44,9 @@
   .ev-date b{display:block;font-size:1.35rem;line-height:1}
   .ev-date span{font-size:.7rem;color:var(--muted);text-transform:uppercase}
   .ev-body{min-width:0;flex:1}
+  .ev-acts{flex:0 0 auto;display:flex;align-items:center;gap:2px;align-self:center}
+  .wz{display:block;padding:4px;border-radius:8px}
+  .wz img{display:block;border-radius:7px}
   .fav{flex:0 0 auto;align-self:center;border:none;background:none;font-size:1.5rem;line-height:1;cursor:pointer;color:#c9c4b8;padding:6px 2px 6px 6px}
   .fav.on{color:#f2a900}
   .chip.favchip.on{background:#f2a900;border-color:#f2a900;color:#fff}
@@ -205,8 +208,10 @@ function renderList(){
         <div class="meta"><span class="tag" style="background:${k.color}">${esc(k.label)}</span>${esc(f)}</div>
         <div class="meta">${c.nom && l ? "📍 " + esc(l) + " · " : ""}${c.heure ? "🕗 " + esc(c.heure) : ""}${c.systeme ? " · " + esc(c.systeme) : ""}${c.challenge ? " · " + esc(c.challenge) : ""}</div>
       </div>
-      <button class="fav ${isFav(c)?"on":""}" data-fav="${esc(c.id)}" aria-label="${isFav(c)?"Retirer des favoris":"Ajouter aux favoris"}" aria-pressed="${isFav(c)}">${isFav(c)?"★":"☆"}</button></div>`;
+      <div class="ev-acts"><a class="wz" href="${wazeUrl(c)}" target="_blank" rel="noopener" aria-label="Itinéraire Waze vers ${esc(titre(c))}"><img src="waze.png" alt="" width="30" height="30"></a>
+      <button class="fav ${isFav(c)?"on":""}" data-fav="${esc(c.id)}" aria-label="${isFav(c)?"Retirer des favoris":"Ajouter aux favoris"}" aria-pressed="${isFav(c)}">${isFav(c)?"★":"☆"}</button></div></div>`;
   }).join("");
+  list.querySelectorAll(".wz").forEach(a => a.onclick = ev => ev.stopPropagation());
   list.querySelectorAll(".fav").forEach(b => b.onclick = ev => { ev.stopPropagation(); toggleFav(b.dataset.fav); render(); });
   list.querySelectorAll(".ev").forEach(e => {
     const open = () => openDetail(DATA.concours.find(c => c.id === e.dataset.id));
@@ -214,11 +219,13 @@ function renderList(){
   });
 }
 
+function wazeUrl(c){
+  const where = c.adresse || ["boulodrome", c.club, c.dept].filter(Boolean).join(" ");
+  return `https://waze.com/ul?q=${encodeURIComponent(where)}&navigate=yes`;
+}
 function openDetail(c){
   const k = catOf(c);
-  const where = c.adresse || ["boulodrome", c.club, c.dept].filter(Boolean).join(" ");
-  const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(where)}`;
-  const waze = `https://waze.com/ul?q=${encodeURIComponent(where)}&navigate=yes`;
+  const waze = wazeUrl(c);
   const tel = c.tel ? `<a href="tel:${c.tel.replace(/\s/g,"")}">${esc(c.tel)}</a>` : "";
   const rows = [
     ["Date", esc(dateTexte(c))],
@@ -241,7 +248,7 @@ function openDetail(c){
      <span class="tag" style="background:${k.color}">${esc(k.label)}</span>
      <h3>${esc(titre(c))}</h3>${rows}
      <button class="btn favbtn" id="favBtn">${isFav(c) ? "★ Dans mes favoris" : "☆ Ajouter aux favoris"}</button>
-     <a class="btn" href="${maps}" target="_blank" rel="noopener">📍 Google Maps</a><a class="btn waze" href="${waze}" target="_blank" rel="noopener"><img src="waze.png" alt="" width="26" height="26">Waze</a>${c.tel ? `<a class="btn alt" href="tel:${c.tel.replace(/\s/g,"")}">📞 Appeler</a>` : ""}`;
+     <a class="btn waze" href="${waze}" target="_blank" rel="noopener"><img src="waze.png" alt="" width="26" height="26">Waze</a>${c.tel ? `<a class="btn alt" href="tel:${c.tel.replace(/\s/g,"")}">📞 Appeler</a>` : ""}`;
   const m = document.getElementById("modal");
   m.classList.add("open");
   m.querySelector(".close").onclick = closeDetail;
