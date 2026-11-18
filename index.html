@@ -357,7 +357,6 @@ function renderList(){
     return;
   }
   let pastHeader = false, lastDept = null;
-  const nbParDept = {}; if (parDept) items.forEach(c => { const k = deptRang(c) < 99 ? c.dept : "autres"; nbParDept[k] = (nbParDept[k] || 0) + 1; });
   list.innerHTML = items.map(c => {
     const d = parseD(c.date), k = catOf(c);
     const past = listMode && pastConcours(c);
@@ -367,7 +366,7 @@ function renderList(){
       if (k !== lastDept){
         lastDept = k;
         const nom = k === "autres" ? "Hors Île-de-France / national" : `${k} · ${DEPT_NOMS[k] || ""}`;
-        sep += `<div class="dept-band"><span>${esc(nom)}</span><small>${nbParDept[k]}</small></div>`;
+        sep += `<div class="dept-band"><span>${esc(nom)}</span></div>`;
       }
     }
     const l = lieu(c), f = format(c);
