@@ -19,6 +19,9 @@
   main{max-width:760px;margin:0 auto;padding:12px 12px 40px}
   .tools{display:flex;gap:8px;margin-bottom:10px}
   .search{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:1rem;background:#fff}
+  .deptbtn{flex:0 0 auto;max-width:45%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:.95rem;background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:inherit}
+  .deptbtn.on{background:var(--primary);border-color:var(--primary);color:#fff}
+  .deptpanel{display:flex;flex-wrap:wrap;gap:7px;margin:-2px 0 12px;padding:10px;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
   select{padding:10px;border:1px solid var(--line);border-radius:10px;font-size:.95rem;background:#fff;color:var(--ink)}
   .filters{display:flex;gap:7px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
   .filters::-webkit-scrollbar{display:none}
@@ -90,8 +93,9 @@
 <main>
   <div class="tools">
     <input class="search" id="q" type="search" placeholder="Club, ville, challenge…" aria-label="Rechercher">
-    <select id="dept" aria-label="Département"><option value="">Tous dép.</option></select>
+    <button class="deptbtn" id="deptBtn" aria-expanded="false" aria-controls="deptPanel">Tous dép. ▾</button>
   </div>
+  <div class="deptpanel hidden" id="deptPanel" role="group" aria-label="Départements"></div>
   <div class="filters" id="filters"></div>
 
   <section class="card" id="calCard">
@@ -122,7 +126,15 @@
 let DATA = { concours: [] };
 const today = new Date(); today.setHours(0,0,0,0);
 let view = new Date(today.getFullYear(), today.getMonth(), 1);
-let selected = null, cat = "", dept = "", query = "", favMode = false;
+let selected = null, cat = "", query = "", favMode = false;
+
+/* ---------- Départements choisis : plusieurs possibles, mémorisés dans le navigateur ---------- */
+const DEPT_KEY = "lyonnaise-departements";
+let depts = new Set();
+try { depts = new Set(JSON.parse(localStorage.getItem(DEPT_KEY) || "[]").filter(d => DEPTS.includes(d))); } catch {}
+function saveDepts(){ try { localStorage.setItem(DEPT_KEY, JSON.stringify([...depts])); } catch {} }
+// Les épreuves hors Île-de-France ou sans département (nationales…) restent toujours visibles
+const deptOk = c => !depts.size || !DEPTS.includes(c.dept) || depts.has(c.dept);
 
 /* ---------- Favoris : mémorisés dans le navigateur du visiteur ---------- */
 const FAV_KEY = "lyonnaise-favoris";
@@ -136,7 +148,7 @@ const pastConcours = c => (c.fin || c.date) < dkey(today);
 function filtered(){
   const q = query.trim().toLowerCase();
   return DATA.concours.filter(c =>
-    (!favMode || isFav(c)) && (!cat || c.cat === cat) && (!dept || c.dept === dept) &&
+    (!favMode || isFav(c)) && (!cat || c.cat === cat) && deptOk(c) &&
     (!q || [c.nom,c.club,c.dept,c.challenge,c.division,c.formule,c.adresse,c.info,c.systeme].join(" ").toLowerCase().includes(q)));
 }
 
@@ -203,7 +215,7 @@ function renderList(){
     return;
   }
   if (!items.length){
-    list.innerHTML = `<div class="empty">Aucun concours ${selected ? "ce jour-là" : "ce mois-ci"}${cat||dept||query ? " avec ces filtres" : ""}.${selected ? "<br>Touchez à nouveau le jour pour revoir tout le mois." : ""}</div>`;
+    list.innerHTML = `<div class="empty">Aucun concours ${selected ? "ce jour-là" : "ce mois-ci"}${cat||depts.size||query ? " avec ces filtres" : ""}.${selected ? "<br>Touchez à nouveau le jour pour revoir tout le mois." : ""}</div>`;
     return;
   }
   let pastHeader = false;
@@ -272,9 +284,24 @@ document.getElementById("prev").onclick = () => shift(-1);
 document.getElementById("next").onclick = () => shift(1);
 document.getElementById("todayBtn").onclick = () => { view = new Date(today.getFullYear(), today.getMonth(), 1); selected = dkey(today); render(); };
 document.getElementById("q").oninput = e => { query = e.target.value; selected = null; render(); };
-const deptSel = document.getElementById("dept");
-deptSel.innerHTML += DEPTS.map(d => `<option value="${d}">${d}</option>`).join("");
-deptSel.onchange = e => { dept = e.target.value; selected = null; render(); };
+const deptBtn = document.getElementById("deptBtn"), deptPanel = document.getElementById("deptPanel");
+function renderDepts(){
+  deptBtn.textContent = (depts.size ? [...depts].sort().join(", ") : "Tous dép.") + " ▾";
+  deptBtn.classList.toggle("on", depts.size > 0);
+  deptPanel.innerHTML = `<button class="chip ${depts.size ? "" : "on"}" data-d="">Tous</button>` +
+    DEPTS.map(d => `<button class="chip ${depts.has(d) ? "on" : ""}" data-d="${d}" aria-pressed="${depts.has(d)}">${d}</button>`).join("");
+  deptPanel.querySelectorAll(".chip").forEach(b => b.onclick = () => {
+    const d = b.dataset.d;
+    if (!d) depts.clear(); else depts.has(d) ? depts.delete(d) : depts.add(d);
+    if (depts.size === DEPTS.length) depts.clear();
+    saveDepts(); selected = null; renderDepts(); render();
+  });
+}
+deptBtn.onclick = () => {
+  const open = deptPanel.classList.toggle("hidden") === false;
+  deptBtn.setAttribute("aria-expanded", open);
+};
+renderDepts();
 
 let tx = null, ty = null;
 const gridEl = document.getElementById("grid");
