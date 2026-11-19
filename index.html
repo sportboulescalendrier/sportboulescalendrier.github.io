@@ -91,6 +91,12 @@
   .dept-band{display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px;padding:8px 14px;border-radius:10px;background:var(--primary);color:#fff;font-weight:700;font-size:.95rem}
   .dept-band:first-child{margin-top:0}
   .dept-band small{background:rgba(255,255,255,.2);border-radius:999px;padding:2px 9px;font-weight:600}
+  .viewbar{display:flex;gap:6px;margin:0 0 10px;background:var(--card);border-radius:12px;padding:4px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .viewbar button{flex:1;border:none;background:none;color:var(--ink);border-radius:9px;padding:9px 6px;font:inherit;font-size:.92rem;font-weight:600;cursor:pointer}
+  .viewbar button.on{background:var(--primary);color:#fff}
+  .month-band{background:var(--accent)}
+  .month-band.old{opacity:.6}
+  .pasttoggle{display:block;width:100%;border:1px dashed var(--line);background:none;color:var(--muted);border-radius:10px;padding:10px;font:inherit;font-size:.9rem;cursor:pointer;margin-bottom:12px}
   .past-title{margin:18px 4px 8px;font-size:.9rem;color:var(--muted);font-weight:600}
   .ev-date .yr{display:block;font-size:.7rem;color:var(--muted)}
   .hidden{display:none !important}
@@ -144,6 +150,7 @@
   </div>
   <div class="filters" id="filters"></div>
 
+  <div class="viewbar" id="viewBar" role="tablist"><button data-v="mois" role="tab">📅 Par mois</button><button data-v="saison" role="tab">📋 Toute la saison</button></div>
   <section class="card" id="calCard">
     <div class="cal-head">
       <button class="nav" id="prev" aria-label="Mois précédent">‹</button>
@@ -176,6 +183,11 @@ let DATA = { concours: [] };
 const today = new Date(); today.setHours(0,0,0,0);
 let view = new Date(today.getFullYear(), today.getMonth(), 1);
 let selected = null, query = "", favMode = false, clubKey = "";
+
+/* ---------- Vue « Toute la saison » (mémorisée) ---------- */
+const VUE_KEY = "lyonnaise-vue";
+let seasonMode = false, showPast = false;
+try { seasonMode = localStorage.getItem(VUE_KEY) === "saison"; } catch {}
 
 /* ---------- Catégories affichées : plusieurs possibles, mémorisées dans le navigateur ---------- */
 const CAT_KEY = "lyonnaise-categories";
@@ -324,10 +336,24 @@ function renderCalendar(){
   });
 }
 
+function bindPastToggle(){
+  const t = document.getElementById("pastToggle");
+  if (t) t.onclick = () => { showPast = !showPast; renderList(); };
+}
+document.getElementById("viewBar").querySelectorAll("button").forEach(b => b.onclick = () => {
+  seasonMode = b.dataset.v === "saison"; selected = null;
+  try { localStorage.setItem(VUE_KEY, seasonMode ? "saison" : "mois"); } catch {}
+  render();
+});
 function renderList(){
   let items = filtered(), title;
   const listMode = favMode || !!clubKey;
-  document.getElementById("calCard").classList.toggle("hidden", listMode);
+  const saison = seasonMode && !listMode;
+  document.getElementById("calCard").classList.toggle("hidden", listMode || saison);
+  const vb = document.getElementById("viewBar");
+  vb.classList.toggle("hidden", listMode);
+  vb.querySelectorAll("button").forEach(b => { const on = (b.dataset.v === "saison") === seasonMode; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+  let nbPasses = 0;
   if (!favMode || clubKey) document.getElementById("favSync").classList.add("hidden");
   renderClubBox();
   if (clubKey){
@@ -340,6 +366,12 @@ function renderList(){
     items = [...all.filter(c => !pastConcours(c)), ...all.filter(pastConcours).reverse()];
     title = "Mes favoris";
     renderSync();
+  } else if (saison){
+    // Tous les concours de la saison avec les filtres choisis, par mois
+    nbPasses = items.filter(pastConcours).length;
+    if (!showPast) items = items.filter(c => !pastConcours(c));
+    items = trier(items);
+    title = "Toute la saison";
   } else if (selected){
     items = items.filter(c => joursDe(c).includes(selected));
     title = parseD(selected).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
@@ -348,11 +380,11 @@ function renderList(){
     items = items.filter(c => joursDe(c).some(k => k.startsWith(ym)));
     title = `${MOIS[view.getMonth()]} ${view.getFullYear()}`;
   }
-  if (!listMode) items = trier(items);
-  const parDept = !listMode && sortMode === "dept";
+  if (!listMode && !saison) items = trier(items);
+  const parDept = !listMode && !saison && sortMode === "dept";
   if (parDept) items = items.slice().sort((a, b) => deptRang(a) - deptRang(b) || (a.dept || "").localeCompare(b.dept || ""));  // tri stable : la date reste l'ordre secondaire
   const sb = document.getElementById("sortBar");
-  sb.classList.toggle("hidden", listMode);
+  sb.classList.toggle("hidden", listMode || saison);
   sb.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.s === sortMode));
   document.getElementById("listTitle").textContent = title.charAt(0).toUpperCase() + title.slice(1);
   document.getElementById("listCount").textContent = items.length ? `${items.length} concours` : "";
@@ -365,15 +397,26 @@ function renderList(){
     list.innerHTML = `<div class="empty">Aucun favori pour l'instant.<br>Touchez l'étoile ☆ d'un concours pour l'ajouter à vos favoris.</div>`;
     return;
   }
+  const pastToggle = saison && nbPasses
+    ? `<button class="pasttoggle" id="pastToggle">${showPast ? "Masquer les concours passés" : `Afficher aussi les concours passés (${nbPasses})`}</button>` : "";
+  if (!items.length && saison){
+    list.innerHTML = pastToggle + `<div class="empty">Aucun concours à venir${cats.size||depts.size||query ? " avec ces filtres" : ""}.</div>`;
+    bindPastToggle(); return;
+  }
   if (!items.length){
     list.innerHTML = `<div class="empty">Aucun concours ${selected ? "ce jour-là" : "ce mois-ci"}${cats.size||depts.size||query ? " avec ces filtres" : ""}.${selected ? "<br>Touchez à nouveau le jour pour revoir tout le mois." : ""}</div>`;
     return;
   }
-  let pastHeader = false, lastDept = null;
-  list.innerHTML = items.map(c => {
+  let pastHeader = false, lastDept = null, lastMonth = null;
+  list.innerHTML = pastToggle + items.map(c => {
     const d = parseD(c.date), k = catOf(c);
-    const past = listMode && pastConcours(c);
-    let sep = past && !pastHeader ? (pastHeader = true, `<div class="past-title">Déjà passés</div>`) : "";
+    const past = (listMode || saison) && pastConcours(c);
+    let sep = past && !pastHeader && !saison ? (pastHeader = true, `<div class="past-title">Déjà passés</div>`) : "";
+    if (saison && c.date.slice(0, 7) !== lastMonth){
+      lastMonth = c.date.slice(0, 7);
+      const m = parseD(c.date);
+      sep += `<div class="dept-band month-band${pastConcours(c) ? " old" : ""}"><span>${MOIS[m.getMonth()].charAt(0).toUpperCase() + MOIS[m.getMonth()].slice(1)} ${m.getFullYear()}</span></div>`;
+    }
     if (parDept){
       const k = deptRang(c) < 99 ? c.dept : "autres";
       if (k !== lastDept){
@@ -388,10 +431,11 @@ function renderList(){
       <div class="ev-body">
         <h3>${esc(titre(c))}${!c.nom && c.dept ? ` <span style="font-weight:400;color:var(--muted)">(${esc(c.dept)})</span>` : ""}${c.statut?`<span class="warn">${esc(c.statut)}</span>`:""}</h3>
         <div class="meta"><span class="tag" style="background:${k.color}">${esc(k.label)}</span>${esc(f)}</div>
-        <div class="meta">${c.nom && l ? "📍 " + esc(l) + " · " : ""}${c.heure ? "🕗 " + esc(c.heure) : ""}${c.systeme ? " · " + esc(c.systeme) : ""}${c.challenge ? " · " + esc(c.challenge) : ""}</div>
+        <div class="meta">${[c.nom && l ? "📍 " + esc(l) : "", c.heure ? "🕗 " + esc(c.heure) : "", esc(c.systeme), esc(c.challenge)].filter(Boolean).join(" · ")}</div>
       </div>
       <button class="fav ${isFav(c)?"on":""}" data-fav="${esc(c.id)}" aria-label="${isFav(c)?"Retirer des favoris":"Ajouter aux favoris"}" aria-pressed="${isFav(c)}">${isFav(c)?"★":"☆"}</button></div>`;
   }).join("");
+  bindPastToggle();
   list.querySelectorAll(".fav").forEach(b => b.onclick = ev => { ev.stopPropagation(); toggleFav(b.dataset.fav); render(); });
   list.querySelectorAll(".ev").forEach(e => {
     const open = () => openDetail(DATA.concours.find(c => c.id === e.dataset.id));
