@@ -175,7 +175,13 @@
 let DATA = { concours: [] };
 const today = new Date(); today.setHours(0,0,0,0);
 let view = new Date(today.getFullYear(), today.getMonth(), 1);
-let selected = null, cat = "", query = "", favMode = false, clubKey = "";
+let selected = null, query = "", favMode = false, clubKey = "";
+
+/* ---------- Catégories affichées : plusieurs possibles, mémorisées dans le navigateur ---------- */
+const CAT_KEY = "lyonnaise-categories";
+let cats = new Set();
+try { cats = new Set(JSON.parse(localStorage.getItem(CAT_KEY) || "[]").filter(k => k in CATS)); } catch {}
+function saveCats(){ try { localStorage.setItem(CAT_KEY, JSON.stringify([...cats])); } catch {} }
 // Identifiant du club d'un concours (club de la base, sinon lieu libre)
 const clubKeyOf = c => (c.db && c.db.club_id) ? c.db.club_id : (c.club ? "lieu:" + c.club + "|" + (c.dept || "") : "");
 
@@ -269,7 +275,7 @@ function filtered(){
   if (clubKey) return DATA.concours.filter(c => clubKeyOf(c) === clubKey);
   const q = query.trim().toLowerCase();
   return DATA.concours.filter(c =>
-    (!favMode || isFav(c)) && (!cat || c.cat === cat) && deptOk(c) &&
+    (!favMode || isFav(c)) && (!cats.size || cats.has(c.cat)) && deptOk(c) &&
     (!q || [c.nom,c.club,c.dept,c.challenge,c.division,c.formule,c.adresse,c.info,c.systeme].join(" ").toLowerCase().includes(q)));
 }
 
@@ -279,9 +285,16 @@ function renderFilters(){
   const nFav = DATA.concours.filter(isFav).length;
   el.innerHTML = `<button class="chip favchip ${favMode?"on":""}" id="favChip">★ Mes favoris${nFav?` (${nFav})`:""}</button>` +
     opts.map(([k,l]) =>
-    `<button class="chip ${k===cat&&!favMode?"on":""}" data-c="${k}">${k?`<i class="dot" style="background:${CATS[k].color}"></i>`:""}${l}</button>`).join("");
-  el.querySelectorAll(".chip[data-c]").forEach(b => b.onclick = () => { cat = b.dataset.c; favMode = false; clubKey = ""; selected = null; render(); });
-  document.getElementById("favChip").onclick = () => { favMode = !favMode; clubKey = ""; cat = ""; selected = null; render(); };
+    `<button class="chip ${!favMode && (k ? cats.has(k) : !cats.size) ? "on" : ""}" data-c="${k}" aria-pressed="${k ? cats.has(k) : !cats.size}">${k?`<i class="dot" style="background:${CATS[k].color}"></i>`:""}${l}</button>`).join("");
+  el.querySelectorAll(".chip[data-c]").forEach(b => b.onclick = () => {
+    const k = b.dataset.c;
+    if (!k) cats.clear();
+    else if (favMode) { cats = new Set([k]); }          // depuis les favoris : on revient au calendrier sur cette catégorie
+    else cats.has(k) ? cats.delete(k) : cats.add(k);
+    if (cats.size === Object.keys(CATS).length) cats.clear();
+    saveCats(); favMode = false; clubKey = ""; selected = null; render();
+  });
+  document.getElementById("favChip").onclick = () => { favMode = !favMode; clubKey = ""; selected = null; render(); };
 }
 
 function renderCalendar(){
@@ -353,7 +366,7 @@ function renderList(){
     return;
   }
   if (!items.length){
-    list.innerHTML = `<div class="empty">Aucun concours ${selected ? "ce jour-là" : "ce mois-ci"}${cat||depts.size||query ? " avec ces filtres" : ""}.${selected ? "<br>Touchez à nouveau le jour pour revoir tout le mois." : ""}</div>`;
+    list.innerHTML = `<div class="empty">Aucun concours ${selected ? "ce jour-là" : "ce mois-ci"}${cats.size||depts.size||query ? " avec ces filtres" : ""}.${selected ? "<br>Touchez à nouveau le jour pour revoir tout le mois." : ""}</div>`;
     return;
   }
   let pastHeader = false, lastDept = null;
